@@ -11,6 +11,7 @@ import PrivateRoute from "./components/PrivateRoute";
 const App = () => {
   return (
     <Routes>
+      {/* DEFAULT */}
       <Route path="/" element={<Navigate to="/login" replace />} />
 
       {/* PUBLIC */}
@@ -30,6 +31,7 @@ const App = () => {
         <Route path="/settings" element={<Settings />} />
       </Route>
 
+      {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
