@@ -1,6 +1,13 @@
 import React, { useEffect, useState } from "react";
 import { getAuth, updateProfile } from "firebase/auth";
-import { getDatabase, ref, update, onValue, remove, push } from "firebase/database";
+import {
+  getDatabase,
+  ref,
+  update,
+  onValue,
+  remove,
+  push,
+} from "firebase/database";
 import { SlCloudUpload } from "react-icons/sl";
 import { uploadToCloudinary } from "../../utility/cloudinaryUpload";
 
@@ -11,6 +18,7 @@ const Settings = () => {
   const [user, setUser] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [blockedList, setBlockedList] = useState([]);
+  const [storyUploading, setStoryUploading] = useState(false);
 
   /* ================= AUTH ================= */
   useEffect(() => {
@@ -32,7 +40,7 @@ const Settings = () => {
     });
   }, []);
 
-  /* ================= PROFILE UPLOAD ================= */
+  /* ================= PROFILE PHOTO ================= */
   const handleProfileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file || !user) return;
@@ -42,10 +50,8 @@ const Settings = () => {
 
       const imageURL = await uploadToCloudinary(file);
 
-      // auth update
       await updateProfile(user, { photoURL: imageURL });
 
-      // db update
       await update(ref(db, `users/${user.uid}`), {
         userPhotoUrl: imageURL,
       });
@@ -55,6 +61,36 @@ const Settings = () => {
       console.error(err);
     } finally {
       setUploading(false);
+    }
+  };
+
+  /* ================= STORY UPLOAD ================= */
+  const handleStoryUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setStoryUploading(true);
+
+      const imageURL = await uploadToCloudinary(file);
+      const now = Date.now();
+
+      await push(ref(db, "stories"), {
+        uid: auth.currentUser.uid,
+        userName: auth.currentUser.displayName,
+        userPhoto: auth.currentUser.photoURL,
+        image: imageURL,
+        createdAt: now,
+        expireAt: now + 24 * 60 * 60 * 1000, // 24 hours
+        views: {},
+        reactions: {},
+      });
+
+      alert("Story uploaded successfully 🎉");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setStoryUploading(false);
     }
   };
 
@@ -76,9 +112,9 @@ const Settings = () => {
   };
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4 space-y-8">
 
-      {/* PROFILE SECTION */}
+      {/* ================= PROFILE ================= */}
       <div className="flex flex-col items-center gap-3">
         <div className="relative w-24 h-24 rounded-full overflow-hidden group">
           <img
@@ -104,7 +140,23 @@ const Settings = () => {
         <h2 className="font-semibold">{user?.displayName}</h2>
       </div>
 
-      {/* BLOCKED USERS */}
+      {/* ================= ADD STORY ================= */}
+      <div className="bg-white p-4 rounded shadow">
+        <h2 className="font-semibold mb-2">Add Story</h2>
+
+        <label className="inline-flex items-center gap-2 cursor-pointer text-blue-600">
+          <SlCloudUpload />
+          {storyUploading ? "Uploading..." : "Upload Story"}
+          <input
+            type="file"
+            hidden
+            accept="image/*"
+            onChange={handleStoryUpload}
+          />
+        </label>
+      </div>
+
+      {/* ================= BLOCKED USERS ================= */}
       <div>
         <h2 className="text-xl font-semibold mb-3">Blocked Users</h2>
 

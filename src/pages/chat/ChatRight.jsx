@@ -12,11 +12,11 @@ import { db, auth } from "../../configuration/firebaseConfig";
 import moment from "moment";
 import { clearFriend } from "../../Features/FriendSlice/FriendSlice";
 import { uploadToCloudinary } from "../../utility/cloudinaryUpload";
+import StoryViewer from "../../components/story/StoryViewer";
 
 const ChatRight = () => {
   const dispatch = useDispatch();
   const bottomRef = useRef(null);
-
   const { friendsItem } = useSelector((state) => state.friendStore);
 
   const [inputValue, setInputValue] = useState("");
@@ -24,17 +24,20 @@ const ChatRight = () => {
   const [showEmoji, setShowEmoji] = useState(false);
   const [image, setImage] = useState(null);
 
-  const [editMsgId, setEditMsgId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [editMsgId, setEditMsgId] = useState(null);
 
-  /* ===== FETCH MESSAGES ===== */
+  const [stories, setStories] = useState([]);
+  const [activeStory, setActiveStory] = useState(null);
+
+  /* ================= FETCH CHAT ================= */
   useEffect(() => {
     if (!friendsItem?.id) return;
 
     const msgRef = ref(db, "singleMsg");
-    onValue(msgRef, (snapshot) => {
+    onValue(msgRef, (snap) => {
       let arr = [];
-      snapshot.forEach((item) => {
+      snap.forEach((item) => {
         const d = item.val();
         if (
           (d.whoSendMsgUId === auth.currentUser.uid &&
@@ -49,32 +52,42 @@ const ChatRight = () => {
     });
   }, [friendsItem?.id]);
 
-  /* ===== AUTO SCROLL ===== */
+  /* ================= FETCH STORIES ================= */
+  useEffect(() => {
+    const storyRef = ref(db, "stories");
+    onValue(storyRef, (snap) => {
+      let arr = [];
+      snap.forEach((item) => {
+        const d = item.val();
+        if (Date.now() < d.expireAt) {
+          arr.push({ ...d, id: item.key });
+        }
+      });
+      setStories(arr);
+    });
+  }, []);
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [allMsg]);
 
-  /* ===== SEND / EDIT MESSAGE ===== */
+  /* ================= SEND MESSAGE ================= */
   const sendMessage = async () => {
     if ((!inputValue && !image) || !friendsItem?.id) return;
 
-    // ✏️ EDIT MODE
     if (isEditing && editMsgId) {
       await update(ref(db, `singleMsg/${editMsgId}`), {
         msg: inputValue,
         edited: true,
       });
-      setInputValue("");
       setIsEditing(false);
       setEditMsgId(null);
+      setInputValue("");
       return;
     }
 
-    // 🖼 IMAGE UPLOAD
     let imageURL = "";
-    if (image) {
-      imageURL = await uploadToCloudinary(image);
-    }
+    if (image) imageURL = await uploadToCloudinary(image);
 
     await push(ref(db, "singleMsg"), {
       whoSendMsgUId: auth.currentUser.uid,
@@ -89,36 +102,42 @@ const ChatRight = () => {
     setShowEmoji(false);
   };
 
-  /* ===== EMPTY STATE ===== */
   if (!friendsItem?.id) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400">
-        👈 Select a friend to start chat
+        👈 Select a friend
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col h-full bg-white relative">
+  const friendStory = stories.find((s) => s.uid === friendsItem.id);
 
-      {/* ===== HEADER ===== */}
-      <div className="flex items-center gap-3 p-4 border-b sticky top-0 bg-white z-30">
-        <button
-          onClick={() => dispatch(clearFriend())}
-          className="md:hidden text-xl"
-        >
+  return (
+    <div className="flex flex-col h-full bg-white">
+
+      {/* ================= HEADER ================= */}
+      <div className="flex items-center gap-3 p-4 border-b">
+        <button onClick={() => dispatch(clearFriend())} className="md:hidden">
           <IoArrowBack />
         </button>
 
-        <img
-          src={friendsItem.profile_picture || avatar}
-          className="w-10 h-10 rounded-full object-cover"
-        />
+        <div
+          onClick={() => friendStory && setActiveStory(friendStory)}
+          className={`p-[2px] rounded-full ${
+            friendStory ? "bg-gradient-to-tr from-pink-500 to-yellow-400" : ""
+          }`}
+        >
+          <img
+            src={friendsItem.profile_picture || avatar}
+            className="w-10 h-10 rounded-full object-cover bg-white"
+          />
+        </div>
+
         <h3 className="font-semibold">{friendsItem.name}</h3>
       </div>
 
-      {/* ===== MESSAGE LIST ===== */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 pb-[120px]">
+      {/* ================= MESSAGE ================= */}
+      <div className="flex-1 overflow-y-auto px-4 py-4">
         {allMsg.map((m) => (
           <div
             key={m.key}
@@ -129,34 +148,29 @@ const ChatRight = () => {
             }`}
           >
             {m.image && (
-              <img
-                src={m.image}
-                className="max-w-[220px] sm:max-w-[300px] rounded-xl mb-2"
-              />
+              <img src={m.image} className="max-w-[240px] rounded-xl mb-2" />
             )}
+
+           {m.storyReply && (
+  <div className="mb-2 p-2 border-l-4 border-pink-500 bg-pink-50 rounded">
+    <p className="text-xs text-gray-500 mb-1">
+      Replied to a story
+    </p>
+    <img
+      src={m.storyReply.storyImage}
+      className="w-32 rounded-lg"
+    />
+  </div>
+)}
+
 
             {m.msg && (
-              <div className="bg-blue-600 text-white px-4 py-2 rounded-2xl break-words">
+              <div className="bg-blue-600 text-white px-4 py-2 rounded-2xl">
                 {m.msg}
                 {m.edited && (
-                  <span className="block text-[10px] opacity-70 mt-1">
-                    edited
-                  </span>
+                  <span className="block text-[10px] opacity-70">edited</span>
                 )}
               </div>
-            )}
-
-            {m.whoSendMsgUId === auth.currentUser.uid && (
-              <button
-                onClick={() => {
-                  setInputValue(m.msg);
-                  setEditMsgId(m.key);
-                  setIsEditing(true);
-                }}
-                className="text-xs text-gray-400 mt-1 flex items-center gap-1"
-              >
-                <MdEdit /> Edit
-              </button>
             )}
 
             <p className="text-xs text-gray-400 mt-1">
@@ -167,18 +181,14 @@ const ChatRight = () => {
         <div ref={bottomRef} />
       </div>
 
-      {/* ===== INPUT ===== */}
-      <div className="sticky bottom-0 bg-white border-t px-2 py-2 z-40">
-        <div className="relative flex items-center gap-2">
-
-          <button
-            onClick={() => setShowEmoji((p) => !p)}
-            className="text-2xl px-2"
-          >
+      {/* ================= INPUT ================= */}
+      <div className="border-t p-2">
+        <div className="flex items-center gap-2 relative">
+          <button onClick={() => setShowEmoji(!showEmoji)}>
             <CiFaceSmile />
           </button>
 
-          <label className="text-2xl px-2 cursor-pointer">
+          <label>
             <FaCameraRetro />
             <input
               type="file"
@@ -191,9 +201,8 @@ const ChatRight = () => {
           <input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            onFocus={() => setShowEmoji(false)}
-            className="flex-1 bg-gray-100 px-4 py-3 rounded-full outline-none"
-            placeholder={isEditing ? "Edit message..." : "Type message..."}
+            className="flex-1 bg-gray-100 px-4 py-2 rounded-full"
+            placeholder="Type message..."
           />
 
           <button
@@ -204,32 +213,24 @@ const ChatRight = () => {
           </button>
 
           {showEmoji && (
-            <div className="absolute bottom-full left-0 mb-2 z-50">
+            <div className="absolute bottom-full left-0 z-50">
               <EmojiPicker
                 height={320}
                 onEmojiClick={(e) =>
-                  setInputValue((prev) => prev + e.emoji)
+                  setInputValue((p) => p + e.emoji)
                 }
               />
             </div>
           )}
         </div>
-
-        {image && (
-          <div className="mt-2 flex items-center gap-2">
-            <img
-              src={URL.createObjectURL(image)}
-              className="w-14 h-14 object-cover rounded-lg"
-            />
-            <button
-              onClick={() => setImage(null)}
-              className="text-sm text-red-500"
-            >
-              remove
-            </button>
-          </div>
-        )}
       </div>
+
+      {activeStory && (
+        <StoryViewer
+          story={activeStory}
+          close={() => setActiveStory(null)}
+        />
+      )}
     </div>
   );
 };

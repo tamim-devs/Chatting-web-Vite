@@ -1,10 +1,13 @@
 export const uploadToCloudinary = async (file) => {
   const cloudName = "duxaxx2dm";
-  const uploadPreset = "chat_upload"; 
+  const uploadPreset = "chat_upload";
+
+  if (!file) return "";
 
   const formData = new FormData();
   formData.append("file", file);
   formData.append("upload_preset", uploadPreset);
+  formData.append("folder", "chat-app"); // 🔥 optional but clean
 
   try {
     const res = await fetch(
@@ -15,10 +18,19 @@ export const uploadToCloudinary = async (file) => {
       }
     );
 
+    if (!res.ok) throw new Error("Cloudinary upload failed");
+
     const data = await res.json();
-    return data.secure_url || "";
+
+    // 🔥 optimized image (FAST LOAD)
+    const optimizedUrl = data.secure_url.replace(
+      "/upload/",
+      "/upload/f_auto,q_auto,w_900/"
+    );
+
+    return optimizedUrl;
   } catch (err) {
-    console.error(err);
+    console.error("Cloudinary error:", err);
     return "";
   }
 };

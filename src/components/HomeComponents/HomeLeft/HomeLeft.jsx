@@ -3,25 +3,24 @@ import {
   getAuth,
   onAuthStateChanged,
   signOut,
-  updateProfile,
 } from "firebase/auth";
 import { Link, useNavigate } from "react-router-dom";
 import { CiLogin } from "react-icons/ci";
 import { IoIosHome } from "react-icons/io";
 import { IoSettings } from "react-icons/io5";
 import { MdChat } from "react-icons/md";
-import { SlCloudUpload } from "react-icons/sl";
-import { getDatabase, ref, update } from "firebase/database";
-import { uploadToCloudinary } from "../../../utility/cloudinaryUpload";
+
+import { useStories } from "../../hooks/useStories";
+import StoryViewer from "../../story/StoryViewer";
+import AddStory from "../../story/AddStory";
 
 const HomeLeft = () => {
   const auth = getAuth();
-  const db = getDatabase();
   const navigate = useNavigate();
 
+  const stories = useStories();
+  const [openStory, setOpenStory] = useState(null);
   const [user, setUser] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [imgLoaded, setImgLoaded] = useState(false);
 
   /* ================= AUTH ================= */
   useEffect(() => {
@@ -31,32 +30,10 @@ const HomeLeft = () => {
     return () => unsub();
   }, []);
 
-  /* ================= IMAGE UPLOAD ================= */
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file || !user) return;
-
-    try {
-      setUploading(true);
-
-      const imageURL = await uploadToCloudinary(file);
-
-      // auth update
-      await updateProfile(user, { photoURL: imageURL });
-
-      // db update
-      await update(ref(db, `users/${user.uid}`), {
-        userPhotoUrl: imageURL,
-      });
-
-      setUser({ ...user, photoURL: imageURL });
-      setImgLoaded(false);
-    } catch (err) {
-      console.error("Upload failed", err);
-    } finally {
-      setUploading(false);
-    }
-  };
+  /* ================= MY STORY ================= */
+  const myStory = stories.find(
+    (s) => s.uid === auth.currentUser?.uid
+  );
 
   /* ================= LOGOUT ================= */
   const handleLogout = async () => {
@@ -77,79 +54,60 @@ const HomeLeft = () => {
         z-50
       "
     >
-      {/* ================= PROFILE ================= */}
+      {/* ================= PROFILE + STORY ================= */}
       <div className="hidden lg:flex flex-col items-center gap-2 mb-10">
-        <div className="relative w-20 h-20 rounded-full overflow-hidden bg-white group">
-
-          {/* Skeleton */}
-          {!imgLoaded && user?.photoURL && (
-            <div className="absolute inset-0 bg-gray-300 animate-pulse" />
-          )}
-
-          {/* Profile Image */}
-          {user?.photoURL ? (
+        <div
+          onClick={() => myStory && setOpenStory(myStory)}
+          className={`p-[3px] rounded-full cursor-pointer ${
+            myStory
+              ? "bg-gradient-to-tr from-pink-500 to-yellow-400"
+              : "bg-white"
+          }`}
+        >
+          <div className="w-20 h-20 rounded-full overflow-hidden bg-white">
             <img
-              src={user.photoURL}
+              src={user?.photoURL}
+              className="w-full h-full object-cover"
               alt="profile"
-              loading="lazy"
-              decoding="async"
-              onLoad={() => setImgLoaded(true)}
-              className={`w-full h-full object-cover transition-opacity duration-300 ${
-                imgLoaded ? "opacity-100" : "opacity-0"
-              }`}
             />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-200">
-              <SlCloudUpload className="text-3xl text-blue-600" />
-            </div>
-          )}
-
-          {/* Upload Overlay */}
-          {user && (
-            <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition">
-              {uploading ? (
-                <span className="text-white text-xs">Uploading...</span>
-              ) : (
-                <SlCloudUpload className="text-white text-xl" />
-              )}
-              <input
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={handleImageUpload}
-              />
-            </label>
-          )}
+          </div>
         </div>
 
-        <p className="text-white text-sm font-semibold text-center">
-          {user?.displayName || "Guest"}
+        <AddStory />
+
+        <p className="text-white text-sm font-semibold">
+          {user?.displayName}
         </p>
       </div>
 
       {/* ================= NAV ================= */}
-      <Link to="/home" className="text-3xl lg:text-4xl text-white hover:text-black">
+      <Link to="/home" className="text-3xl lg:text-4xl text-white">
         <IoIosHome />
       </Link>
 
-      <Link to="/chat" className="text-3xl lg:text-4xl text-white hover:text-black">
+      <Link to="/chat" className="text-3xl lg:text-4xl text-white">
         <MdChat />
       </Link>
 
-      <Link
-        to="/settings"
-        className="text-3xl lg:text-4xl text-white hover:text-black"
-      >
+      <Link to="/settings" className="text-3xl lg:text-4xl text-white">
         <IoSettings />
       </Link>
 
       {/* LOGOUT */}
       <button
         onClick={handleLogout}
-        className="text-3xl lg:text-4xl text-white hover:text-black"
+        className="text-3xl lg:text-4xl text-white"
       >
         <CiLogin />
       </button>
+
+      {/* ================= STORY MODAL ================= */}
+      {openStory && (
+        <StoryViewer
+          story={openStory}
+          close={() => setOpenStory(null)}
+        />
+      )}
     </div>
   );
 };
