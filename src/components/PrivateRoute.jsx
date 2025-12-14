@@ -1,28 +1,30 @@
-// src/components/PrivateRoute.jsx
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate } from "react-router-dom";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../configuration/firebaseConfig";
 
-const PrivateRoute = () => {
-  const [user, setUser] = useState(undefined);
+const PrivateRoute = ({ children }) => {
+  const auth = getAuth();
+  const [user, setUser] = useState(undefined); // ⚠️ IMPORTANT
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
+      setUser(currentUser || null);
     });
     return () => unsub();
   }, []);
 
+  // 🔄 auth checking
   if (user === undefined) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        Loading...
-      </div>
-    );
+    return null; // or loader
   }
 
-  return user ? <Outlet /> : <Navigate to="/login" replace />;
+  // ❌ not logged in
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // ✅ logged in
+  return children;
 };
 
 export default PrivateRoute;

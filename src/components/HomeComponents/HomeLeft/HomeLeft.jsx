@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { getAuth, onAuthStateChanged, updateProfile } from "firebase/auth";
-import { Link } from "react-router-dom";
+import { getAuth, onAuthStateChanged, signOut, updateProfile } from "firebase/auth";
+import { Link, useNavigate } from "react-router-dom";
 import { CiLogin } from "react-icons/ci";
 import { IoIosHome } from "react-icons/io";
 import { IoSettings } from "react-icons/io5";
@@ -12,6 +12,7 @@ import { uploadToCloudinary } from "../../../utility/cloudinaryUpload";
 const HomeLeft = () => {
   const auth = getAuth();
   const db = getDatabase();
+  const navigate = useNavigate();
 
   const [user, setUser] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -41,11 +42,9 @@ const HomeLeft = () => {
 
     try {
       setUploading(true);
-
       const imageURL = await uploadToCloudinary(file);
 
       await updateProfile(user, { photoURL: imageURL });
-
       await update(ref(db, `users/${user.uid}`), {
         userPhotoUrl: imageURL,
       });
@@ -56,6 +55,12 @@ const HomeLeft = () => {
     } finally {
       setUploading(false);
     }
+  };
+
+  /* ================= LOGOUT ================= */
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/login", { replace: true }); 
   };
 
   return (
@@ -72,8 +77,8 @@ const HomeLeft = () => {
       "
     >
       {/* ================= PROFILE ================= */}
-      <div className="flex lg:flex-col items-center gap-2 lg:mb-10">
-        <div className="relative w-14 h-14 lg:w-20 lg:h-20 rounded-full overflow-hidden bg-white group">
+      <div className="hidden lg:flex flex-col items-center gap-2 mb-10">
+        <div className="relative w-20 h-20 rounded-full overflow-hidden bg-white group">
           {user?.photoURL ? (
             <img
               src={user.photoURL}
@@ -82,11 +87,10 @@ const HomeLeft = () => {
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-200">
-              <SlCloudUpload className="text-xl lg:text-3xl text-blue-600" />
+              <SlCloudUpload className="text-3xl text-blue-600" />
             </div>
           )}
 
-          {/* UPLOAD OVERLAY (desktop hover) */}
           {user && (
             <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition">
               {uploading ? (
@@ -104,39 +108,34 @@ const HomeLeft = () => {
           )}
         </div>
 
-        <p className="hidden lg:block text-white text-sm font-semibold text-center">
+        <p className="text-white text-sm font-semibold text-center">
           {user?.displayName || "Guest"}
         </p>
       </div>
 
       {/* ================= NAV ================= */}
-      <Link
-        to="/home"
-        className="text-3xl lg:text-4xl text-white hover:text-black transition"
-      >
+      <Link to="/home" className="text-3xl lg:text-4xl text-white hover:text-black">
         <IoIosHome />
       </Link>
 
-      <Link
-        to="/chat"
-        className="text-3xl lg:text-4xl text-white hover:text-black transition"
-      >
+      <Link to="/chat" className="text-3xl lg:text-4xl text-white hover:text-black">
         <MdChat />
       </Link>
 
       <Link
         to="/settings"
-        className="text-3xl lg:text-4xl text-white hover:text-black transition"
+        className="text-3xl lg:text-4xl text-white hover:text-black"
       >
         <IoSettings />
       </Link>
 
-      <Link
-        to="/login"
-        className="text-3xl lg:text-4xl text-white hover:text-black transition"
+      {/* LOGOUT */}
+      <button
+        onClick={handleLogout}
+        className="text-3xl lg:text-4xl text-white hover:text-black"
       >
         <CiLogin />
-      </Link>
+      </button>
     </div>
   );
 };
