@@ -1,5 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { getAuth, onAuthStateChanged, signOut, updateProfile } from "firebase/auth";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signOut,
+  updateProfile,
+} from "firebase/auth";
 import { Link, useNavigate } from "react-router-dom";
 import { CiLogin } from "react-icons/ci";
 import { IoIosHome } from "react-icons/io";
@@ -16,22 +21,13 @@ const HomeLeft = () => {
 
   const [user, setUser] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [imgLoaded, setImgLoaded] = useState(false);
 
   /* ================= AUTH ================= */
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-
-        update(ref(db, `users/${currentUser.uid}`), {
-          userName: currentUser.displayName || "Unknown",
-          userPhotoUrl: currentUser.photoURL || "",
-        });
-      } else {
-        setUser(null);
-      }
+      setUser(currentUser || null);
     });
-
     return () => unsub();
   }, []);
 
@@ -42,14 +38,19 @@ const HomeLeft = () => {
 
     try {
       setUploading(true);
+
       const imageURL = await uploadToCloudinary(file);
 
+      // auth update
       await updateProfile(user, { photoURL: imageURL });
+
+      // db update
       await update(ref(db, `users/${user.uid}`), {
         userPhotoUrl: imageURL,
       });
 
       setUser({ ...user, photoURL: imageURL });
+      setImgLoaded(false);
     } catch (err) {
       console.error("Upload failed", err);
     } finally {
@@ -60,7 +61,7 @@ const HomeLeft = () => {
   /* ================= LOGOUT ================= */
   const handleLogout = async () => {
     await signOut(auth);
-    navigate("/login", { replace: true }); 
+    navigate("/login", { replace: true });
   };
 
   return (
@@ -79,11 +80,23 @@ const HomeLeft = () => {
       {/* ================= PROFILE ================= */}
       <div className="hidden lg:flex flex-col items-center gap-2 mb-10">
         <div className="relative w-20 h-20 rounded-full overflow-hidden bg-white group">
+
+          {/* Skeleton */}
+          {!imgLoaded && user?.photoURL && (
+            <div className="absolute inset-0 bg-gray-300 animate-pulse" />
+          )}
+
+          {/* Profile Image */}
           {user?.photoURL ? (
             <img
               src={user.photoURL}
               alt="profile"
-              className="w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
+              onLoad={() => setImgLoaded(true)}
+              className={`w-full h-full object-cover transition-opacity duration-300 ${
+                imgLoaded ? "opacity-100" : "opacity-0"
+              }`}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-200">
@@ -91,6 +104,7 @@ const HomeLeft = () => {
             </div>
           )}
 
+          {/* Upload Overlay */}
           {user && (
             <label className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition">
               {uploading ? (
