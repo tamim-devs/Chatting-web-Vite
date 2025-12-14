@@ -13,36 +13,37 @@ const UserList = () => {
   const [friends, setFriends] = useState([]);
   const [sentRequests, setSentRequests] = useState({});
 
-  /* ================= Load Registered Users ================= */
+  /* ================= LOAD REGISTERED USERS ONLY ================= */
   useEffect(() => {
-    const userRef = ref(db, "users/");
+    const userRef = ref(db, "users");
     onValue(userRef, (snapshot) => {
-      let userArr = [];
+      let arr = [];
 
       snapshot.forEach((item) => {
         const user = item.val();
 
-        // ✅ Only properly registered users
+        // ✅ STRICT FILTER
         if (
+          user.isRegistered === true &&
           user.userUid &&
           user.userEmail &&
           user.userName &&
           user.userUid !== auth.currentUser?.uid
         ) {
-          userArr.push({
+          arr.push({
             ...user,
             userKey: item.key,
           });
         }
       });
 
-      setUsers(userArr);
+      setUsers(arr);
     });
   }, []);
 
-  /* ================= Load Friend Requests ================= */
+  /* ================= FRIEND REQUEST ================= */
   useEffect(() => {
-    const reqRef = ref(db, "FriendRequest/");
+    const reqRef = ref(db, "FriendRequest");
     onValue(reqRef, (snapshot) => {
       let arr = [];
       snapshot.forEach((item) => arr.push(item.val()));
@@ -50,9 +51,9 @@ const UserList = () => {
     });
   }, []);
 
-  /* ================= Load Friends ================= */
+  /* ================= FRIENDS ================= */
   useEffect(() => {
-    const friendRef = ref(db, "Friends/");
+    const friendRef = ref(db, "Friends");
     onValue(friendRef, (snapshot) => {
       let arr = [];
       snapshot.forEach((item) => arr.push(item.val()));
@@ -60,24 +61,23 @@ const UserList = () => {
     });
   }, []);
 
-  /* ================= Send Friend Request ================= */
+  /* ================= SEND FRIEND REQUEST ================= */
   const handleFriendRequest = (user) => {
-    if (!user.userUid) return;
+    const FriendRequestRef = ref(db, "FriendRequest");
 
-    const FriendRequestRef = ref(db, "FriendRequest/");
-    const newRequest = {
+    push(FriendRequestRef, {
       whoSendFriendRequestUid: auth.currentUser.uid,
       whoSendFriendRequestName: auth.currentUser.displayName,
       whoSendFriendRequestEmail: auth.currentUser.email,
       whoSendFriendRequestProfilePicture: auth.currentUser.photoURL || "",
+
       whoRecivedFriendRequestUid: user.userUid,
       whoRecivedFriendRequestName: user.userName,
       whoRecivedFriendRequestEmail: user.userEmail,
       whoRecivedFriendRequestProfile_picture: user.userPhotoUrl || "",
-      createdAt: Date.now(),
-    };
 
-    push(FriendRequestRef, newRequest).then(() => {
+      createdAt: Date.now(),
+    }).then(() => {
       setSentRequests((prev) => ({
         ...prev,
         [user.userKey]: true,
@@ -85,24 +85,24 @@ const UserList = () => {
     });
   };
 
-  /* ================= Check Requested or Friend ================= */
-  const checkIsRequestedOrFriend = (user) => {
-    const currentUid = auth.currentUser.uid;
+  /* ================= CHECK REQUESTED / FRIEND ================= */
+  const checkDisabled = (user) => {
+    const uid = auth.currentUser.uid;
 
     const isRequested = friendRequests.some(
       (req) =>
-        (req.whoSendFriendRequestUid === currentUid &&
+        (req.whoSendFriendRequestUid === uid &&
           req.whoRecivedFriendRequestUid === user.userUid) ||
         (req.whoSendFriendRequestUid === user.userUid &&
-          req.whoRecivedFriendRequestUid === currentUid)
+          req.whoRecivedFriendRequestUid === uid)
     );
 
     const isFriend = friends.some(
       (fr) =>
-        (fr.whoSendFriendRequestUid === currentUid &&
+        (fr.whoSendFriendRequestUid === uid &&
           fr.whoRecivedFriendRequestUid === user.userUid) ||
         (fr.whoSendFriendRequestUid === user.userUid &&
-          fr.whoRecivedFriendRequestUid === currentUid)
+          fr.whoRecivedFriendRequestUid === uid)
     );
 
     return isRequested || isFriend || sentRequests[user.userKey];
@@ -110,8 +110,6 @@ const UserList = () => {
 
   return (
     <div className="w-full sm:w-[320px] bg-blue-200 rounded-xl shadow-md p-4 flex flex-col h-full">
-
-      {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <h1 className="font-semibold text-lg">User List</h1>
         <span className="text-sm bg-blue-600 text-white px-3 py-1 rounded-full">
@@ -119,47 +117,37 @@ const UserList = () => {
         </span>
       </div>
 
-      {/* User List */}
-      <div className="flex flex-col gap-3 overflow-y-auto scrollbar-hide">
+      <div className="flex flex-col gap-3 overflow-y-auto">
         {users.map((user) => {
-          const disabled = checkIsRequestedOrFriend(user);
+          const disabled = checkDisabled(user);
 
           return (
             <div
               key={user.userKey}
-              className="flex items-center gap-3 bg-white p-3 rounded-lg shadow hover:bg-blue-50 transition"
+              className="flex items-center gap-3 bg-white p-3 rounded-lg shadow"
             >
-              {/* Avatar */}
-              <div className="h-12 w-12 rounded-full overflow-hidden bg-gray-200 shrink-0">
+              <div className="h-12 w-12 rounded-full overflow-hidden">
                 <img
                   src={user.userPhotoUrl || avatar}
-                  alt="user"
                   className="h-full w-full object-cover"
                 />
               </div>
 
-              {/* Info */}
-              <div className="flex-1 overflow-hidden">
-                <h2 className="font-semibold text-sm truncate">
-                  {user.userName}
-                </h2>
-                <p className="text-xs text-gray-600 truncate">
-                  {moment(user.createdAt || Date.now()).calendar()}
+              <div className="flex-1">
+                <h2 className="font-semibold text-sm">{user.userName}</h2>
+                <p className="text-xs text-gray-500">
+                  {moment(user.createdAt).calendar()}
                 </p>
               </div>
 
-              {/* Action */}
               {disabled ? (
-                <button
-                  disabled
-                  className="h-9 w-9 rounded-md bg-green-500 text-white font-bold"
-                >
+                <button className="h-9 w-9 bg-green-500 text-white rounded">
                   ✓
                 </button>
               ) : (
                 <button
                   onClick={() => handleFriendRequest(user)}
-                  className="h-9 w-9 rounded-md bg-violet-600 text-white font-bold hover:bg-violet-700 transition"
+                  className="h-9 w-9 bg-violet-600 text-white rounded"
                 >
                   +
                 </button>
