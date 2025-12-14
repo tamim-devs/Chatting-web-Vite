@@ -1,14 +1,24 @@
 import { initializeApp } from "firebase/app";
-// Your web app's Firebase configuration
+import { getAuth } from "firebase/auth";
+import { getDatabase } from "firebase/database";
+import { getStorage } from "firebase/storage";
+
 const firebaseConfig = {
   apiKey: "AIzaSyDD2Qmatm3mUZMFplKSV2K1CfI-AoRl8zQ",
   authDomain: "chat-web-871ab.firebaseapp.com",
+  databaseURL: "https://chat-web-871ab-default-rtdb.firebaseio.com",
   projectId: "chat-web-871ab",
-  storageBucket: "chat-web-871ab.firebasestorage.app",
+  storageBucket: "chat-web-871ab.appspot.com",
   messagingSenderId: "475579719210",
-  appId: "1:475579719210:web:3498711e803ab192ef6d53"
+  appId: "1:475579719210:web:3498711e803ab192ef6d53",
 };
-console.log("Running Firebase");
 
+// ✅ Initialize app ONLY ONCE
+const app = initializeApp(firebaseConfig);
 
-export const DbApp = initializeApp(firebaseConfig);
+// ✅ Export services
+export const auth = getAuth(app);
+export const db = getDatabase(app);
+export const storage = getStorage(app);
+
+export default app;

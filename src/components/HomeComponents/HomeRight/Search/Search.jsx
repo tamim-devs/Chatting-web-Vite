@@ -1,22 +1,31 @@
 import React from "react";
 import { BsThreeDotsVertical } from "react-icons/bs";
 import { FcSearch } from "react-icons/fc";
-const Search = ({ classname = "py-2" }) => {
+
+const Search = ({ classname = "" }) => {
   return (
-    <div className="relative">
-      <span className="absolute top-[62%] left-4 -translate-y-[83%]">
+    <div className="relative w-full">
+      
+      {/* Search Icon */}
+      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-xl">
         <FcSearch />
       </span>
+
+      {/* Input */}
       <input
         type="text"
         id="search"
         name="search"
-        placeholder="search"
-        className={classname}
+        placeholder="Search"
+        className={`w-full py-3 pl-12 pr-10 rounded-xl border outline-none 
+          focus:ring-2 focus:ring-blue-500 ${classname}`}
       />
-      <span className="absolute top-[62%] -translate-y-[83%] right-5 text-blue-700">
+
+      {/* More Icon */}
+      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-700 text-xl cursor-pointer">
         <BsThreeDotsVertical />
       </span>
+
     </div>
   );
 };

@@ -7,164 +7,159 @@ import moment from "moment";
 const UserList = () => {
   const db = getDatabase();
   const auth = getAuth();
+
   const [users, setUsers] = useState([]);
   const [friendRequests, setFriendRequests] = useState([]);
   const [friends, setFriends] = useState([]);
-  const [sentRequests, setSentRequests] = useState({}); // Track sent requests
+  const [sentRequests, setSentRequests] = useState({});
 
-  // Load all users except current user
+  /* ================= Load Registered Users ================= */
   useEffect(() => {
     const userRef = ref(db, "users/");
     onValue(userRef, (snapshot) => {
       let userArr = [];
+
       snapshot.forEach((item) => {
         const user = item.val();
-        if (user.userUid !== auth.currentUser?.uid) {  // Use user.userUid here
+
+        // ✅ Only properly registered users
+        if (
+          user.userUid &&
+          user.userEmail &&
+          user.userName &&
+          user.userUid !== auth.currentUser?.uid
+        ) {
           userArr.push({
             ...user,
             userKey: item.key,
           });
         }
       });
+
       setUsers(userArr);
     });
   }, []);
 
-  // Load friend requests to check if request is already sent/received
+  /* ================= Load Friend Requests ================= */
   useEffect(() => {
     const reqRef = ref(db, "FriendRequest/");
     onValue(reqRef, (snapshot) => {
-      let reqArr = [];
-      snapshot.forEach((item) => {
-        reqArr.push(item.val());
-      });
-      setFriendRequests(reqArr);
+      let arr = [];
+      snapshot.forEach((item) => arr.push(item.val()));
+      setFriendRequests(arr);
     });
   }, []);
 
-  // Load friends to avoid showing request button if already friends
+  /* ================= Load Friends ================= */
   useEffect(() => {
     const friendRef = ref(db, "Friends/");
     onValue(friendRef, (snapshot) => {
-      let friendArr = [];
-      snapshot.forEach((item) => {
-        friendArr.push(item.val());
-      });
-      setFriends(friendArr);
+      let arr = [];
+      snapshot.forEach((item) => arr.push(item.val()));
+      setFriends(arr);
     });
   }, []);
 
+  /* ================= Send Friend Request ================= */
   const handleFriendRequest = (user) => {
-    // Debugging log to inspect the user object
-    console.log("User object:", user);
-
-    // Check if the user object has UID
-    if (!user.userUid) {  // Check for user.userUid here
-      console.error("User UID is missing! User object:", user);
-      return;
-    }
+    if (!user.userUid) return;
 
     const FriendRequestRef = ref(db, "FriendRequest/");
     const newRequest = {
+      whoSendFriendRequestUid: auth.currentUser.uid,
       whoSendFriendRequestName: auth.currentUser.displayName,
       whoSendFriendRequestEmail: auth.currentUser.email,
-      whoSendFriendRequestUid: auth.currentUser.uid,
-      whoSendFriendRequestProfilePicture: auth.currentUser.photoURL || null,
-      whoRecivedFriendRequestUid: user.userUid, // Use user.userUid here
+      whoSendFriendRequestProfilePicture: auth.currentUser.photoURL || "",
+      whoRecivedFriendRequestUid: user.userUid,
       whoRecivedFriendRequestName: user.userName,
       whoRecivedFriendRequestEmail: user.userEmail,
-      whoRecivedFriendRequestUserKey: user.userKey,
-      whoRecivedFriendRequestProfile_picture: user.userPhotoUrl,
+      whoRecivedFriendRequestProfile_picture: user.userPhotoUrl || "",
       createdAt: Date.now(),
     };
 
-    // Debugging log to inspect newRequest
-    console.log("New friend request:", newRequest);
-
-    // Send friend request to Firebase
-    push(FriendRequestRef, newRequest)
-      .then(() => {
-        console.log("Friend request sent!");
-        setSentRequests((prevState) => ({
-          ...prevState,
-          [user.userKey]: true, // Update state to reflect that request was sent
-        }));
-      })
-      .catch((err) => console.error("Request failed", err));
+    push(FriendRequestRef, newRequest).then(() => {
+      setSentRequests((prev) => ({
+        ...prev,
+        [user.userKey]: true,
+      }));
+    });
   };
 
-  // Check if user is already requested or already friends
+  /* ================= Check Requested or Friend ================= */
   const checkIsRequestedOrFriend = (user) => {
     const currentUid = auth.currentUser.uid;
 
-    // Check if the current user has already sent a request to the user or vice versa
     const isRequested = friendRequests.some(
       (req) =>
         (req.whoSendFriendRequestUid === currentUid &&
-          req.whoRecivedFriendRequestUid === user.userUid) ||  // Use user.userUid here
+          req.whoRecivedFriendRequestUid === user.userUid) ||
         (req.whoSendFriendRequestUid === user.userUid &&
-          req.whoRecivedFriendRequestUid === currentUid)  // Use user.userUid here
+          req.whoRecivedFriendRequestUid === currentUid)
     );
 
-    // Check if the user is already a friend
     const isFriend = friends.some(
       (fr) =>
         (fr.whoSendFriendRequestUid === currentUid &&
-          fr.whoRecivedFriendRequestUid === user.userUid) ||  // Use user.userUid here
+          fr.whoRecivedFriendRequestUid === user.userUid) ||
         (fr.whoSendFriendRequestUid === user.userUid &&
-          fr.whoRecivedFriendRequestUid === currentUid)  // Use user.userUid here
+          fr.whoRecivedFriendRequestUid === currentUid)
     );
 
-    // Return true if already requested or already friends or request already sent
     return isRequested || isFriend || sentRequests[user.userKey];
   };
 
   return (
-    <div className="w-full sm:w-[320px] bg-blue-200 rounded-xl shadow-md p-4 max-h-[500px] overflow-hidden flex flex-col gap-4">
-      <div className="flex items-center justify-between">
+    <div className="w-full sm:w-[320px] bg-blue-200 rounded-xl shadow-md p-4 flex flex-col h-full">
+
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
         <h1 className="font-semibold text-lg">User List</h1>
-        <span className="text-sm bg-sky-600 text-white px-3 py-1 rounded-full">
+        <span className="text-sm bg-blue-600 text-white px-3 py-1 rounded-full">
           {users.length}
         </span>
       </div>
 
-      <div className="flex flex-col gap-4 overflow-y-auto pr-2 scrollbar-hide max-h-[400px]">
+      {/* User List */}
+      <div className="flex flex-col gap-3 overflow-y-auto scrollbar-hide">
         {users.map((user) => {
-          const alreadySentOrFriend = checkIsRequestedOrFriend(user);
+          const disabled = checkIsRequestedOrFriend(user);
 
           return (
             <div
               key={user.userKey}
-              className="flex items-center justify-between bg-white p-3 rounded-lg shadow hover:bg-blue-50 transition duration-300"
+              className="flex items-center gap-3 bg-white p-3 rounded-lg shadow hover:bg-blue-50 transition"
             >
-              <div className="h-[50px] w-[50px] rounded-full overflow-hidden bg-gray-200">
+              {/* Avatar */}
+              <div className="h-12 w-12 rounded-full overflow-hidden bg-gray-200 shrink-0">
                 <img
                   src={user.userPhotoUrl || avatar}
-                  alt="User"
-                  className="h-full w-full object-cover rounded-full"
+                  alt="user"
+                  className="h-full w-full object-cover"
                 />
               </div>
 
-              <div className="flex-1 px-3 overflow-hidden">
-                <h1 className="font-semibold text-base truncate">
-                  {user.userName || "Unknown User"}
-                </h1>
-                <p className="text-sm text-gray-600 truncate">
-                  {moment(user.createdAt).calendar()}
+              {/* Info */}
+              <div className="flex-1 overflow-hidden">
+                <h2 className="font-semibold text-sm truncate">
+                  {user.userName}
+                </h2>
+                <p className="text-xs text-gray-600 truncate">
+                  {moment(user.createdAt || Date.now()).calendar()}
                 </p>
               </div>
 
-              {alreadySentOrFriend ? (
+              {/* Action */}
+              {disabled ? (
                 <button
                   disabled
-                  className="h-9 w-9 bg-green-500 text-white text-xl font-bold rounded-md flex items-center justify-center"
+                  className="h-9 w-9 rounded-md bg-green-500 text-white font-bold"
                 >
                   ✓
                 </button>
               ) : (
                 <button
                   onClick={() => handleFriendRequest(user)}
-                  className="h-9 w-9 bg-violet-600 text-white text-xl font-bold rounded-md flex items-center justify-center hover:bg-violet-700 transition"
+                  className="h-9 w-9 rounded-md bg-violet-600 text-white font-bold hover:bg-violet-700 transition"
                 >
                   +
                 </button>

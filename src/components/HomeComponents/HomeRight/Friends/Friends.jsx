@@ -1,136 +1,163 @@
 import { useEffect, useState } from "react";
-import { BsThreeDotsVertical } from "react-icons/bs";
-import GroupImg from "../../../../assets/HomeAssets/HomeRightAssets/GroupListAssets/g2.gif";
-import { getDatabase, ref, onValue, set, push, remove } from "firebase/database";
-import { useSelector, useDispatch } from "react-redux";
+import { getDatabase, ref, onValue, remove, push } from "firebase/database";
 import { getAuth } from "firebase/auth";
+import { useDispatch } from "react-redux";
 import moment from "moment";
-import { Friensinfo } from "../../../../Features/FriendSlice/FriendSlice.js";
+import { Friensinfo } from "../../../../Features/FriendSlice/FriendSlice";
+import { BsThreeDotsVertical } from "react-icons/bs";
 
-const Friends = ({ isChatC = false }) => {
+const Friends = () => {
   const db = getDatabase();
-  const dispatch = useDispatch();
   const auth = getAuth();
-  const [FriendList, setFriendList] = useState([]);
+  const dispatch = useDispatch();
 
+  const [friendList, setFriendList] = useState([]);
+  const [openMenu, setOpenMenu] = useState(null);
+
+  /* ===== FETCH FRIENDS ===== */
   useEffect(() => {
-    const FreindsDbRef = ref(db, "Friends/");
-    onValue(FreindsDbRef, (snapshot) => {
-      let FreindsBlankArr = [];
+    const friendsRef = ref(db, "Friends");
+    onValue(friendsRef, (snapshot) => {
+      let arr = [];
       snapshot.forEach((item) => {
+        const data = item.val();
         if (
-          auth.currentUser.uid === item.val().whoRecivedFriendRequestUid ||
-          auth.currentUser.uid === item.val().whoSendFriendRequestUid
+          data.whoSendFriendRequestUid === auth.currentUser.uid ||
+          data.whoRecivedFriendRequestUid === auth.currentUser.uid
         ) {
-          FreindsBlankArr.push({
-            ...item.val(),
-            FriendKey: item.key,
-          });
+          arr.push({ ...data, friendKey: item.key });
         }
       });
-      setFriendList(FreindsBlankArr);
+      setFriendList(arr);
     });
   }, []);
 
-  const handleBlocked = (item = {}) => {
-    const makeObj = {
-      blockbyUid: item.whoRecivedFriendRequestUid,
-      blockbyName: item.whoRecivedFriendRequestName,
-      blockbyEmail: item.whoRecivedFriendRequestEmail,
-      blockbyProfile_picture: item.whoRecivedFriendRequestProfile_picture || "",
-      blockedUid: item.whoSendFriendRequestUid,
-      blockedName: item.whoSendFriendRequestName,
-      blockedEmail: item.whoSendFriendRequestEmail,
-      blockedProfile_picture: item.whoSendFriendRequestProfilePicture || "",
-      FriendRequestKey: item.FriendRequestKey,
-    };
-    const blockRef = ref(db, "blockedUser/");
-    set(push(blockRef), makeObj).then(() => {
-      remove(ref(db, "Friends/" + item.FriendKey));
-    });
+  /* ===== CHAT CLICK ===== */
+  const handleFriendClick = (item) => {
+    const isSender = item.whoSendFriendRequestUid === auth.currentUser.uid;
+
+    dispatch(
+      Friensinfo({
+        id: isSender
+          ? item.whoRecivedFriendRequestUid
+          : item.whoSendFriendRequestUid,
+        name: isSender
+          ? item.whoRecivedFriendRequestName
+          : item.whoSendFriendRequestName,
+        profile_picture: isSender
+          ? item.whoRecivedFriendRequestProfile_picture
+          : item.whoSendFriendRequestProfilePicture,
+      })
+    );
   };
 
-  const handleFriend = (item = {}) => {
-    if (auth.currentUser.uid === item.whoRecivedFriendRequestUid) {
-      dispatch(
-        Friensinfo({
-          id: item.whoSendFriendRequestUid,
-          name: item.whoSendFriendRequestName,
-          email: item.whoSendFriendRequestEmail,
-          profile_picture: item.whoSendFriendRequestProfilePicture,
-        })
-      );
-    } else {
-      dispatch(
-        Friensinfo({
-          id: item.whoRecivedFriendRequestUid,
-          name: item.whoRecivedFriendRequestName,
-          email: item.whoRecivedFriendRequestEmail,
-          profile_picture: item.whoRecivedFriendRequestProfile_picture,
-        })
-      );
-    }
+  /* ===== UNFRIEND ===== */
+  const handleUnfriend = async (item) => {
+    await remove(ref(db, `Friends/${item.friendKey}`));
+    setOpenMenu(null);
+  };
+
+  /* ===== BLOCK ===== */
+  const handleBlock = async (item) => {
+    const isSender = item.whoSendFriendRequestUid === auth.currentUser.uid;
+
+    await push(ref(db, "BlockedUsers"), {
+      blockedByUid: auth.currentUser.uid,
+      blockedByName: auth.currentUser.displayName,
+      blockedByPhoto: auth.currentUser.photoURL,
+
+      blockedUserUid: isSender
+        ? item.whoRecivedFriendRequestUid
+        : item.whoSendFriendRequestUid,
+      blockedUserName: isSender
+        ? item.whoRecivedFriendRequestName
+        : item.whoSendFriendRequestName,
+      blockedUserPhoto: isSender
+        ? item.whoRecivedFriendRequestProfile_picture
+        : item.whoSendFriendRequestProfilePicture,
+
+      createdAt: Date.now(),
+    });
+
+    await remove(ref(db, `Friends/${item.friendKey}`));
+    setOpenMenu(null);
   };
 
   return (
-    <div
-      className={`w-[320px] bg-blue-200 rounded-xl shadow-md p-4 max-h-[500px] overflow-hidden flex flex-col gap-4 ${
-        isChatC ? "" : "w-[32%]"
-      }`}
-    >
-      {/* Header like UserList */}
-      <div className="flex items-center justify-between">
-        <h1 className="font-semibold text-lg">Friends</h1>
-        <span className="text-sm bg-sky-600 text-white px-3 py-1 rounded-full">
-          {FriendList?.length}
-        </span>
-      </div>
+    <div className="p-4 flex flex-col gap-3 bg-blue-200 rounded-md">
+      <div className="flex  items-center justify-between mb-3">
+  <h1 className="font-semibold text-lg">Friend List</h1>
+  <span className="text-sm bg-blue-600 text-white px-3 py-1 rounded-full">
+    {friendList.length}
+  </span>
+</div>
+      {friendList.map((item) => {
+        const isSender =
+          item.whoSendFriendRequestUid === auth.currentUser.uid;
 
-      {/* Scrollable List */}
-      <div className="flex flex-col gap-4 overflow-y-auto pr-2 scrollbar-hide max-h-[400px]">
-        {FriendList?.map((item, index) => (
+        return (
           <div
-            key={index}
-            className="flex items-center justify-between bg-white p-3 rounded-lg shadow hover:bg-gray-100"
-            onClick={() => handleFriend(item)}
+            key={item.friendKey}
+            className="flex items-center justify-between bg-white p-3 rounded shadow"
           >
-            <div className="w-[50px] h-[50px] rounded-full bg-gray-200 flex items-center justify-center">
+            {/* LEFT */}
+            <div
+              onClick={() => handleFriendClick(item)}
+              className="flex items-center gap-3 cursor-pointer"
+            >
               <img
                 src={
-                  item.whoSendFriendRequestProfilePicture
-                    ? item.whoSendFriendRequestProfilePicture
-                    : GroupImg
+                  isSender
+                    ? item.whoRecivedFriendRequestProfile_picture
+                    : item.whoSendFriendRequestProfilePicture
                 }
-                alt="Friend"
-                className="w-full h-full rounded-full object-cover"
+                className="w-12 h-12 rounded-full object-cover"
               />
+
+              <div>
+                <h3 className="font-medium">
+                  {isSender
+                    ? item.whoRecivedFriendRequestName
+                    : item.whoSendFriendRequestName}
+                </h3>
+                <p className="text-xs text-gray-500">
+                  {moment(item.createdAt).fromNow()}
+                </p>
+              </div>
             </div>
 
-            <div className="flex-1 px-3">
-              <h1 className="font-semibold text-base">
-                {item.whoSendFriendRequestUid === auth.currentUser.uid
-                  ? item.whoRecivedFriendRequestName
-                  : item.whoSendFriendRequestName}
-              </h1>
-              <p className="text-sm text-gray-600">
-                {moment(item.createdAt).fromNow()}
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2">
+            {/* MENU */}
+            <div className="relative">
               <button
-                className="h-9 w-16 bg-red-500 text-white text-sm font-semibold rounded-md"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleBlocked(item);
-                }}
+                onClick={() =>
+                  setOpenMenu(
+                    openMenu === item.friendKey ? null : item.friendKey
+                  )
+                }
               >
-                Delete
+                <BsThreeDotsVertical />
               </button>
+
+              {openMenu === item.friendKey && (
+                <div className="absolute right-0 top-6 bg-white shadow rounded text-sm z-50">
+                  <button
+                    onClick={() => handleUnfriend(item)}
+                    className="block w-full px-4 py-2 hover:bg-gray-100"
+                  >
+                    Unfriend
+                  </button>
+                  <button
+                    onClick={() => handleBlock(item)}
+                    className="block w-full px-4 py-2 text-red-600 hover:bg-gray-100"
+                  >
+                    Block
+                  </button>
+                </div>
+              )}
             </div>
           </div>
-        ))}
-      </div>
+        );
+      })}
     </div>
   );
 };

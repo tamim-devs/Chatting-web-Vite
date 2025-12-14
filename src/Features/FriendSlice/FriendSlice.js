@@ -1,18 +1,21 @@
 import { createSlice } from "@reduxjs/toolkit";
 
 const initialState = {
-  friendsItem: {},
+  friendsItem: null, // 🔥 important
 };
 
-export const FriendSlice = createSlice({
+const FriendSlice = createSlice({
   name: "Friends",
   initialState,
   reducers: {
     Friensinfo: (state, action) => {
       state.friendsItem = action.payload;
     },
+    clearFriend: (state) => {
+      state.friendsItem = null;
+    },
   },
 });
 
-export const { Friensinfo } = FriendSlice.actions;
+export const { Friensinfo, clearFriend } = FriendSlice.actions;
 export default FriendSlice.reducer;

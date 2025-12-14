@@ -1,20 +1,37 @@
 import React from "react";
-import ChatLeft from "../../pages/chat/ChatLeft";
-import ChatRight from "../../pages/chat/ChatRight.jsx";
+import ChatLeft from "./ChatLeft";
+import ChatRight from "./ChatRight";
+import { useSelector } from "react-redux";
 
 const Chat = () => {
+  const { friendsItem } = useSelector((state) => state.friendStore);
+
   return (
-    <>
-      <div className="flex  w-full gap-x-10 ">
-        <div className="w-[30%] ">
-          <ChatLeft />
-        </div>
-        <div className="w-[70%] border-2 border-gray-300 rounded-lg p-8">
-          <ChatRight />
-        </div>
+    <div className="flex h-screen w-full">
+
+      {/* LEFT */}
+      <div
+        className={`
+          w-full md:w-[30%] border-r
+          ${friendsItem?.id ? "hidden md:block" : "block"}
+        `}
+      >
+        <ChatLeft />
       </div>
-    </>
+
+      {/* RIGHT */}
+      <div
+        className={`
+          w-full md:w-[70%] flex flex-col
+          ${!friendsItem?.id ? "hidden md:flex" : "flex"}
+        `}
+      >
+        <ChatRight />
+      </div>
+
+    </div>
   );
 };
+;
 
 export default Chat;
