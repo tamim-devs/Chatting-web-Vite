@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
 
 import Login from "./pages/Login";
 import Regestration from "./pages/Regestration";
@@ -7,8 +8,15 @@ import Home from "./pages/Home/Home";
 import Chat from "./pages/chat/Chat";
 import Settings from "./pages/setting/Settings";
 import PrivateRoute from "./components/PrivateRoute";
+import { listenForegroundMessage } from "./utility/firebaseMessaging";
 
 const App = () => {
+
+  // 🔔 FOREGROUND NOTIFICATION LISTENER
+  useEffect(() => {
+    listenForegroundMessage();
+  }, []);
+
   return (
     <Routes>
       {/* DEFAULT */}
