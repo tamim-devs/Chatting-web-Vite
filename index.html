@@ -12,9 +12,14 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    <script>
+   <script>
   if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    window.addEventListener("load", () => {
+      navigator.serviceWorker
+        .register("/firebase-messaging-sw.js")
+        .then(() => console.log("SW registered"))
+        .catch(console.error);
+    });
   }
 </script>
   </body>
