@@ -12,6 +12,7 @@ import { ErrorToast, SucessToast } from "../utils/Toast";
 import { ToastContainer } from "react-toastify";
 import { getDatabase, ref, set } from "firebase/database";
 import { NavLink, useNavigate } from "react-router-dom";
+import { requestPermissionAndToken } from "../../utility/firebaseMessaging"; 
 
 const LoginLeft = () => {
   const db = getDatabase();
@@ -46,7 +47,12 @@ const LoginLeft = () => {
     }
 
     signInWithEmailAndPassword(auth, email, password)
-      .then(() => {
+      .then(async(result) => {
+          const token = await requestPermissionAndToken();
+
+    if (token) {
+      await set(ref(db, `users/${result.user.uid}/fcmToken`), token);
+    }
         SucessToast("Login Successful");
         navigate("/home");
       })
@@ -58,24 +64,30 @@ const LoginLeft = () => {
   };
 
   const handleLoginWithGoogle = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const { uid, email, displayName, photoURL } = result.user;
+  const provider = new GoogleAuthProvider();
 
-      await set(ref(db, `users/${uid}`), {
-        userUid: uid,
-        userEmail: email,
-        userName: displayName || "No Name",
-        userPhotoUrl: photoURL || "",
-      });
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const { uid, email, displayName, photoURL } = result.user;
 
-      SucessToast("Google Login Successful");
-      navigate("/home");
-    } catch (error) {
-      ErrorToast(error.message);
-    }
-  };
+    // 🔥 FCM TOKEN
+    const token = await requestPermissionAndToken();
+
+    await set(ref(db, `users/${uid}`), {
+      userUid: uid,
+      userEmail: email,
+      userName: displayName || "No Name",
+      userPhotoUrl: photoURL || "",
+      fcmToken: token || "",
+    });
+
+    SucessToast("Google Login Successful");
+    navigate("/home");
+  } catch (error) {
+    ErrorToast(error.message);
+  }
+};
+;
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 lg:px-8">
