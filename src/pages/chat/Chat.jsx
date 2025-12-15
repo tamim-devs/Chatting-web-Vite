@@ -2,9 +2,16 @@ import React from "react";
 import ChatLeft from "./ChatLeft";
 import ChatRight from "./ChatRight";
 import { useSelector } from "react-redux";
+import { setChatOpen } from "../../utility/chatState";
 
-const Chat = () => {
+
+  const Chat = () => {
   const { friendsItem } = useSelector((state) => state.friendStore);
+
+   useEffect(() => {
+    setChatOpen(true);           // 🔕 mute
+    return () => setChatOpen(false); // 🔔 unmute
+  }, []);
 
   return (
     <div className="flex h-screen w-full">

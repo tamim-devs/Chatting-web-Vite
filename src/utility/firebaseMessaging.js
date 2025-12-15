@@ -1,8 +1,10 @@
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import app from "../configuration/firebaseConfig";
+import { isChatOpen } from "./chatState";
 
 const messaging = getMessaging(app);
 
+// 🔑 GET TOKEN
 export const requestPermissionAndToken = async () => {
   try {
     const permission = await Notification.requestPermission();
@@ -14,20 +16,21 @@ export const requestPermissionAndToken = async () => {
 
     return token;
   } catch (err) {
-    console.error(err);
+    console.error("FCM Error:", err);
     return null;
   }
 };
 
-// 🔔 FOREGROUND MESSAGE LISTENER + SOUND
+// 🔔 FOREGROUND LISTENER
 export const listenForegroundMessage = () => {
   onMessage(messaging, (payload) => {
     console.log("Foreground message:", payload);
 
-    // 🔊 SOUND
-    const audio = new Audio("/public/notification.mp3");
-    audio.play().catch(() => {
-      console.log("Autoplay blocked");
-    });
+    // 🔕 Chat open → mute
+    if (isChatOpen()) return;
+
+    // 🔊 Chat closed → sound
+    const audio = new Audio("/notification.mp3");
+    audio.play().catch(() => {});
   });
 };

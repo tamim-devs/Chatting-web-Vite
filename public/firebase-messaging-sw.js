@@ -19,6 +19,7 @@ messaging.onBackgroundMessage((payload) => {
     {
       body: payload.notification.body,
       icon: "/logo.png",
+      vibrate: [200, 100, 200],
     }
   );
 });

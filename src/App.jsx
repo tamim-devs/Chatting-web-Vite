@@ -1,6 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useEffect } from "react";
-
 import Login from "./pages/Login";
 import Regestration from "./pages/Regestration";
 import RootLayout from "./components/rootLayout/RootLayout";
@@ -11,22 +10,16 @@ import PrivateRoute from "./components/PrivateRoute";
 import { listenForegroundMessage } from "./utility/firebaseMessaging";
 
 const App = () => {
-
-  // 🔔 FOREGROUND NOTIFICATION LISTENER
   useEffect(() => {
-    listenForegroundMessage();
+    listenForegroundMessage(); 
   }, []);
 
   return (
     <Routes>
-      {/* DEFAULT */}
       <Route path="/" element={<Navigate to="/login" replace />} />
-
-      {/* PUBLIC */}
       <Route path="/login" element={<Login />} />
       <Route path="/regestration" element={<Regestration />} />
 
-      {/* PROTECTED */}
       <Route
         element={
           <PrivateRoute>
@@ -39,7 +32,6 @@ const App = () => {
         <Route path="/settings" element={<Settings />} />
       </Route>
 
-      {/* FALLBACK */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
