@@ -7,29 +7,59 @@ const AddStory = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const imageURL = await uploadToCloudinary(file);
-    if (!imageURL) return;
+    const isVideo = file.type.startsWith("video/");
+    const isImage = file.type.startsWith("image/");
 
-    const now = Date.now();
+    if (!isImage && !isVideo) {
+      alert("Only image or video allowed");
+      return;
+    }
 
-    await push(ref(db, "stories"), {
+    // ⛔ 90s video limit
+    if (isVideo) {
+      const video = document.createElement("video");
+      video.src = URL.createObjectURL(file);
+      await new Promise((res) => (video.onloadedmetadata = res));
+
+      if (video.duration > 90) {
+        alert("Video must be under 90 seconds");
+        return;
+      }
+    }
+
+    const mediaURL = await uploadToCloudinary(file);
+    if (!mediaURL) return;
+
+    const storyData = {
       uid: auth.currentUser.uid,
-      name: auth.currentUser.displayName,
-      image: imageURL,
-      createdAt: now,
-      expireAt: now + 29 * 60 * 60 * 1000,
+      userName: auth.currentUser.displayName,
+      userPhoto: auth.currentUser.photoURL,
+      media: mediaURL,
+      type: isVideo ? "video" : "image",
+      createdAt: Date.now(),
+      expireAt: Date.now() + 24 * 60 * 60 * 1000,
       views: {},
-      reactions: {},
+    };
+
+    // 🔥 SAVE STORY
+    await push(ref(db, "stories"), storyData);
+
+    // 🔥 AUTO POST IN FEED
+    await push(ref(db, "posts"), {
+      ...storyData,
+      text: "added a story",
+      likes: {},
+      isStory: true,
     });
   };
 
   return (
-    <label className="cursor-pointer text-blue-600 text-sm">
+    <label className="cursor-pointer text-blue-600 text-sm font-medium">
       ➕ Add Story
       <input
         type="file"
         hidden
-        accept="image/*"
+        accept="image/*,video/*"
         onChange={handleStoryUpload}
       />
     </label>

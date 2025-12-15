@@ -4,31 +4,25 @@ export const uploadToCloudinary = async (file) => {
 
   if (!file) return "";
 
+  const isVideo = file.type.startsWith("video/");
+  const resourceType = isVideo ? "video" : "image";
+
   const formData = new FormData();
   formData.append("file", file);
   formData.append("upload_preset", uploadPreset);
-  formData.append("folder", "chat-app"); // 🔥 optional but clean
+  formData.append("folder", "chat-app");
 
   try {
     const res = await fetch(
-      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      `https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`,
       {
         method: "POST",
         body: formData,
       }
     );
 
-    if (!res.ok) throw new Error("Cloudinary upload failed");
-
     const data = await res.json();
-
-    // 🔥 optimized image (FAST LOAD)
-    const optimizedUrl = data.secure_url.replace(
-      "/upload/",
-      "/upload/f_auto,q_auto,w_900/"
-    );
-
-    return optimizedUrl;
+    return data.secure_url;
   } catch (err) {
     console.error("Cloudinary error:", err);
     return "";
