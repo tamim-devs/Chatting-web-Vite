@@ -25,7 +25,7 @@ export const listenForegroundMessage = () => {
     console.log("Foreground message:", payload);
 
     // 🔊 SOUND
-    const audio = new Audio("/notification.mp3");
+    const audio = new Audio("/public/notification.mp3");
     audio.play().catch(() => {
       console.log("Autoplay blocked");
     });
