@@ -4,15 +4,31 @@ import { IoIosSend } from "react-icons/io";
 import { CiFaceSmile } from "react-icons/ci";
 import { FaCameraRetro } from "react-icons/fa";
 import { IoArrowBack } from "react-icons/io5";
-import { MdEdit } from "react-icons/md";
 import EmojiPicker from "emoji-picker-react";
 import { useSelector, useDispatch } from "react-redux";
-import { push, ref, onValue, update } from "firebase/database";
+import { push, ref, onValue } from "firebase/database";
 import { db, auth } from "../../configuration/firebaseConfig";
 import moment from "moment";
 import { clearFriend } from "../../Features/FriendSlice/FriendSlice";
 import { uploadToCloudinary } from "../../utility/cloudinaryUpload";
 import StoryViewer from "../../components/story/StoryViewer";
+
+/* ================= GROUP STORIES ================= */
+const groupStoriesByUser = (stories) => {
+  const map = {};
+  stories.forEach((s) => {
+    if (!map[s.uid]) {
+      map[s.uid] = {
+        uid: s.uid,
+        userName: s.userName,
+        userPhoto: s.userPhoto,
+        stories: [],
+      };
+    }
+    map[s.uid].stories.push(s);
+  });
+  return Object.values(map);
+};
 
 const ChatRight = () => {
   const dispatch = useDispatch();
@@ -24,11 +40,10 @@ const ChatRight = () => {
   const [showEmoji, setShowEmoji] = useState(false);
   const [image, setImage] = useState(null);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [editMsgId, setEditMsgId] = useState(null);
-
-  const [stories, setStories] = useState([]);
-  const [activeStory, setActiveStory] = useState(null);
+  /* ===== STORY STATE ===== */
+  const [storyGroups, setStoryGroups] = useState([]);
+  const [openStory, setOpenStory] = useState(false);
+  const [startIndex, setStartIndex] = useState(0);
 
   /* ================= FETCH CHAT ================= */
   useEffect(() => {
@@ -63,7 +78,7 @@ const ChatRight = () => {
           arr.push({ ...d, id: item.key });
         }
       });
-      setStories(arr);
+      setStoryGroups(groupStoriesByUser(arr));
     });
   }, []);
 
@@ -74,17 +89,6 @@ const ChatRight = () => {
   /* ================= SEND MESSAGE ================= */
   const sendMessage = async () => {
     if ((!inputValue && !image) || !friendsItem?.id) return;
-
-    if (isEditing && editMsgId) {
-      await update(ref(db, `singleMsg/${editMsgId}`), {
-        msg: inputValue,
-        edited: true,
-      });
-      setIsEditing(false);
-      setEditMsgId(null);
-      setInputValue("");
-      return;
-    }
 
     let imageURL = "";
     if (image) imageURL = await uploadToCloudinary(image);
@@ -110,21 +114,34 @@ const ChatRight = () => {
     );
   }
 
-  const friendStory = stories.find((s) => s.uid === friendsItem.id);
+  /* ================= FRIEND STORY INDEX ================= */
+  const friendStoryIndex = storyGroups.findIndex(
+    (g) => g.uid === friendsItem.id
+  );
 
   return (
     <div className="flex flex-col h-full bg-white">
 
       {/* ================= HEADER ================= */}
-      <div className="flex items-center gap-3 p-4 border-b">
-        <button onClick={() => dispatch(clearFriend())} className="md:hidden">
+      <div className="fixed top-0 left-0 w-full z-20 flex items-center gap-3 p-3 border-b bg-white">
+        <button
+          onClick={() => dispatch(clearFriend())}
+          className="md:hidden text-xl"
+        >
           <IoArrowBack />
         </button>
 
         <div
-          onClick={() => friendStory && setActiveStory(friendStory)}
+          onClick={() => {
+            if (friendStoryIndex !== -1) {
+              setStartIndex(friendStoryIndex);
+              setOpenStory(true);
+            }
+          }}
           className={`p-[2px] rounded-full ${
-            friendStory ? "bg-gradient-to-tr from-pink-500 to-yellow-400" : ""
+            friendStoryIndex !== -1
+              ? "bg-gradient-to-tr from-pink-500 to-yellow-400"
+              : ""
           }`}
         >
           <img
@@ -133,47 +150,36 @@ const ChatRight = () => {
           />
         </div>
 
-        <h3 className="font-semibold">{friendsItem.name}</h3>
+        <h3 className="font-semibold text-sm truncate">
+          {friendsItem.name}
+        </h3>
       </div>
 
       {/* ================= MESSAGE ================= */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex-1 overflow-y-auto px-3 py-4 pt-[70px] space-y-2">
         {allMsg.map((m) => (
           <div
             key={m.key}
-            className={`mb-4 max-w-[75%] ${
+            className={`max-w-[80%] ${
               m.whoSendMsgUId === auth.currentUser.uid
                 ? "ml-auto text-right"
                 : ""
             }`}
           >
             {m.image && (
-              <img src={m.image} className="max-w-[240px] rounded-xl mb-2" />
+              <img
+                src={m.image}
+                className="max-w-[220px] rounded-xl mb-1"
+              />
             )}
 
-           {m.storyReply && (
-  <div className="mb-2 p-2 border-l-4 border-pink-500 bg-pink-50 rounded">
-    <p className="text-xs text-gray-500 mb-1">
-      Replied to a story
-    </p>
-    <img
-      src={m.storyReply.storyImage}
-      className="w-32 rounded-lg"
-    />
-  </div>
-)}
-
-
             {m.msg && (
-              <div className="bg-blue-600 text-white px-4 py-2 rounded-2xl">
+              <div className="bg-blue-600 text-white px-4 py-2 rounded-2xl text-sm break-words">
                 {m.msg}
-                {m.edited && (
-                  <span className="block text-[10px] opacity-70">edited</span>
-                )}
               </div>
             )}
 
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-[10px] text-gray-400 mt-1">
               {moment(m.createdAt).fromNow()}
             </p>
           </div>
@@ -182,13 +188,13 @@ const ChatRight = () => {
       </div>
 
       {/* ================= INPUT ================= */}
-      <div className="border-t p-2">
+      <div className="border-t p-2 bg-white">
         <div className="flex items-center gap-2 relative">
-          <button onClick={() => setShowEmoji(!showEmoji)}>
+          <button onClick={() => setShowEmoji(!showEmoji)} className="text-xl">
             <CiFaceSmile />
           </button>
 
-          <label>
+          <label className="text-xl">
             <FaCameraRetro />
             <input
               type="file"
@@ -201,7 +207,7 @@ const ChatRight = () => {
           <input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            className="flex-1 bg-gray-100 px-4 py-2 rounded-full"
+            className="flex-1 bg-gray-100 px-4 py-2 rounded-full text-sm"
             placeholder="Type message..."
           />
 
@@ -213,9 +219,10 @@ const ChatRight = () => {
           </button>
 
           {showEmoji && (
-            <div className="absolute bottom-full left-0 z-50">
+            <div className="absolute bottom-[60px] left-0 z-50">
               <EmojiPicker
-                height={320}
+                height={300}
+                width={280}
                 onEmojiClick={(e) =>
                   setInputValue((p) => p + e.emoji)
                 }
@@ -225,10 +232,12 @@ const ChatRight = () => {
         </div>
       </div>
 
-      {activeStory && (
+      {/* ================= STORY VIEWER ================= */}
+      {openStory && (
         <StoryViewer
-          story={activeStory}
-          close={() => setActiveStory(null)}
+          storyGroups={storyGroups}
+          startUserIndex={startIndex}
+          close={() => setOpenStory(false)}
         />
       )}
     </div>

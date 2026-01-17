@@ -1,159 +1,106 @@
 import { useEffect, useState } from "react";
-import { getDatabase, ref, onValue, remove, push } from "firebase/database";
+import { getDatabase, ref, onValue } from "firebase/database";
 import { getAuth } from "firebase/auth";
 import { useDispatch } from "react-redux";
 import moment from "moment";
 import { Friensinfo } from "../../../../Features/FriendSlice/FriendSlice";
-import { BsThreeDotsVertical } from "react-icons/bs";
+import Search from "../Search/Search";
 
 const Friends = () => {
   const db = getDatabase();
   const auth = getAuth();
   const dispatch = useDispatch();
 
-  const [friendList, setFriendList] = useState([]);
-  const [openMenu, setOpenMenu] = useState(null);
+  const [friends, setFriends] = useState([]);
+  const [onlineMap, setOnlineMap] = useState({});
+
+  /* ===== FETCH ONLINE STATUS ===== */
+  useEffect(() => {
+    const usersRef = ref(db, "users");
+    onValue(usersRef, (snap) => {
+      setOnlineMap(snap.val() || {});
+    });
+  }, []);
 
   /* ===== FETCH FRIENDS ===== */
   useEffect(() => {
     const friendsRef = ref(db, "Friends");
+
     onValue(friendsRef, (snapshot) => {
       let arr = [];
+
       snapshot.forEach((item) => {
-        const data = item.val();
+        const d = item.val();
+        const isSender =
+          d.whoSendFriendRequestUid === auth.currentUser.uid;
+
         if (
-          data.whoSendFriendRequestUid === auth.currentUser.uid ||
-          data.whoRecivedFriendRequestUid === auth.currentUser.uid
+          d.whoSendFriendRequestUid === auth.currentUser.uid ||
+          d.whoRecivedFriendRequestUid === auth.currentUser.uid
         ) {
-          arr.push({ ...data, friendKey: item.key });
+          arr.push({
+            id: isSender
+              ? d.whoRecivedFriendRequestUid
+              : d.whoSendFriendRequestUid,
+            name: isSender
+              ? d.whoRecivedFriendRequestName
+              : d.whoSendFriendRequestName,
+            profile_picture: isSender
+              ? d.whoRecivedFriendRequestProfile_picture
+              : d.whoSendFriendRequestProfilePicture,
+            createdAt: d.createdAt,
+          });
         }
       });
-      setFriendList(arr);
+
+      setFriends(arr);
     });
   }, []);
 
-  /* ===== CHAT CLICK ===== */
-  const handleFriendClick = (item) => {
-    const isSender = item.whoSendFriendRequestUid === auth.currentUser.uid;
-
+  const handleSelectFriend = (friend) => {
     dispatch(
       Friensinfo({
-        id: isSender
-          ? item.whoRecivedFriendRequestUid
-          : item.whoSendFriendRequestUid,
-        name: isSender
-          ? item.whoRecivedFriendRequestName
-          : item.whoSendFriendRequestName,
-        profile_picture: isSender
-          ? item.whoRecivedFriendRequestProfile_picture
-          : item.whoSendFriendRequestProfilePicture,
+        id: friend.id,
+        name: friend.name,
+        profile_picture: friend.profile_picture,
       })
     );
   };
 
-  /* ===== UNFRIEND ===== */
-  const handleUnfriend = async (item) => {
-    await remove(ref(db, `Friends/${item.friendKey}`));
-    setOpenMenu(null);
-  };
-
-  /* ===== BLOCK ===== */
-  const handleBlock = async (item) => {
-    const isSender = item.whoSendFriendRequestUid === auth.currentUser.uid;
-
-    await push(ref(db, "BlockedUsers"), {
-      blockedByUid: auth.currentUser.uid,
-      blockedByName: auth.currentUser.displayName,
-      blockedByPhoto: auth.currentUser.photoURL,
-
-      blockedUserUid: isSender
-        ? item.whoRecivedFriendRequestUid
-        : item.whoSendFriendRequestUid,
-      blockedUserName: isSender
-        ? item.whoRecivedFriendRequestName
-        : item.whoSendFriendRequestName,
-      blockedUserPhoto: isSender
-        ? item.whoRecivedFriendRequestProfile_picture
-        : item.whoSendFriendRequestProfilePicture,
-
-      createdAt: Date.now(),
-    });
-
-    await remove(ref(db, `Friends/${item.friendKey}`));
-    setOpenMenu(null);
-  };
-
   return (
-    <div className="p-4 flex flex-col gap-3 bg-blue-200 rounded-md">
-      <div className="flex  items-center justify-between mb-3">
-  <h1 className="font-semibold text-lg">Friend List</h1>
-  <span className="text-sm bg-blue-600 text-white px-3 py-1 rounded-full">
-    {friendList.length}
-  </span>
-</div>
-      {friendList.map((item) => {
-        const isSender =
-          item.whoSendFriendRequestUid === auth.currentUser.uid;
+    <div className="p-3 bg-white rounded-xl shadow flex flex-col gap-3">
+
+      <Search friends={friends} onSelect={handleSelectFriend} />
+
+      {friends.map((f) => {
+        const isOnline = onlineMap?.[f.id]?.online;
 
         return (
           <div
-            key={item.friendKey}
-            className="flex items-center justify-between bg-white p-3 rounded shadow"
+            key={f.id}
+            onClick={() => handleSelectFriend(f)}
+            className="flex items-center gap-3 p-2 rounded hover:bg-gray-100 cursor-pointer"
           >
-            {/* LEFT */}
-            <div
-              onClick={() => handleFriendClick(item)}
-              className="flex items-center gap-3 cursor-pointer"
-            >
+            <div className="relative">
               <img
-                src={
-                  isSender
-                    ? item.whoRecivedFriendRequestProfile_picture
-                    : item.whoSendFriendRequestProfilePicture
-                }
+                src={f.profile_picture}
                 className="w-12 h-12 rounded-full object-cover"
               />
 
-              <div>
-                <h3 className="font-medium">
-                  {isSender
-                    ? item.whoRecivedFriendRequestName
-                    : item.whoSendFriendRequestName}
-                </h3>
-                <p className="text-xs text-gray-500">
-                  {moment(item.createdAt).fromNow()}
-                </p>
-              </div>
+              {/* STATUS DOT */}
+              <span
+                className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                  isOnline ? "bg-green-500" : "bg-red-500"
+                }`}
+              />
             </div>
 
-            {/* MENU */}
-            <div className="relative">
-              <button
-                onClick={() =>
-                  setOpenMenu(
-                    openMenu === item.friendKey ? null : item.friendKey
-                  )
-                }
-              >
-                <BsThreeDotsVertical />
-              </button>
-
-              {openMenu === item.friendKey && (
-                <div className="absolute right-0 top-6 bg-white shadow rounded text-sm z-50">
-                  <button
-                    onClick={() => handleUnfriend(item)}
-                    className="block w-full px-4 py-2 hover:bg-gray-100"
-                  >
-                    Unfriend
-                  </button>
-                  <button
-                    onClick={() => handleBlock(item)}
-                    className="block w-full px-4 py-2 text-red-600 hover:bg-gray-100"
-                  >
-                    Block
-                  </button>
-                </div>
-              )}
+            <div>
+              <p className="font-medium text-sm">{f.name}</p>
+              <p className="text-xs text-gray-500">
+                {isOnline ? "Online" : "Offline"} •{" "}
+                {moment(f.createdAt).fromNow()}
+              </p>
             </div>
           </div>
         );

@@ -9,13 +9,26 @@ import {
   remove,
 } from "firebase/database";
 import moment from "moment";
-import { FaImage, FaThumbsUp } from "react-icons/fa";
+import {
+  FaImage,
+  FaThumbsUp,
+  FaVideo,
+  FaTrash,
+} from "react-icons/fa";
 
 import AddStory from "../../components/story/AddStory";
 import StoryViewer from "../../components/story/StoryViewer";
 import { uploadToCloudinary } from "../../utility/cloudinaryUpload";
 
-/* ================= GROUP STORIES BY USER ================= */
+/* ================= YOUTUBE ID EXTRACT ================= */
+const getYouTubeId = (text) => {
+  const regExp =
+    /(?:youtube\.com\/(?:watch\?v=|shorts\/)|youtu\.be\/)([^&?\s]+)/;
+  const match = text.match(regExp);
+  return match ? match[1] : null;
+};
+
+/* ================= GROUP STORIES ================= */
 const groupStoriesByUser = (stories) => {
   const map = {};
   stories.forEach((s) => {
@@ -35,6 +48,7 @@ const groupStoriesByUser = (stories) => {
 const Home = () => {
   const auth = getAuth();
   const db = getDatabase();
+  const currentUid = auth.currentUser.uid;
 
   /* ================= STORY ================= */
   const [storyGroups, setStoryGroups] = useState([]);
@@ -45,10 +59,12 @@ const Home = () => {
   const [posts, setPosts] = useState([]);
   const [postText, setPostText] = useState("");
   const [postImage, setPostImage] = useState(null);
+  const [postVideo, setPostVideo] = useState(null);
 
   /* ================= COMMENTS ================= */
   const [comments, setComments] = useState({});
   const [commentText, setCommentText] = useState({});
+  const [showAllComments, setShowAllComments] = useState({});
 
   /* ================= FETCH STORIES ================= */
   useEffect(() => {
@@ -81,7 +97,9 @@ const Home = () => {
       let obj = {};
       snap.forEach((post) => {
         let arr = [];
-        post.forEach((c) => arr.push(c.val()));
+        post.forEach((c) => {
+          arr.push({ id: c.key, ...c.val() });
+        });
         obj[post.key] = arr;
       });
       setComments(obj);
@@ -90,35 +108,46 @@ const Home = () => {
 
   /* ================= CREATE POST ================= */
   const handlePost = async () => {
-    if (!postText && !postImage) return;
+    if (!postText && !postImage && !postVideo) return;
 
     let imageURL = "";
-    if (postImage) {
-      imageURL = await uploadToCloudinary(postImage);
-    }
+    let videoURL = "";
+    const youtubeId = getYouTubeId(postText);
+
+    if (postImage) imageURL = await uploadToCloudinary(postImage);
+    if (postVideo) videoURL = await uploadToCloudinary(postVideo);
 
     await push(ref(db, "posts"), {
-      uid: auth.currentUser.uid,
+      uid: currentUid,
       userName: auth.currentUser.displayName,
       userPhoto: auth.currentUser.photoURL,
       text: postText,
       image: imageURL,
+      video: videoURL,
+      youtubeId,
       createdAt: Date.now(),
       likes: {},
     });
 
     setPostText("");
     setPostImage(null);
+    setPostVideo(null);
+  };
+
+  /* ================= DELETE POST ================= */
+  const handleDeletePost = async (post) => {
+    if (post.uid !== currentUid) return;
+    await remove(ref(db, `posts/${post.id}`));
+    await remove(ref(db, `comments/${post.id}`));
   };
 
   /* ================= LIKE ================= */
   const handleLike = (post) => {
     const likeRef = ref(
       db,
-      `posts/${post.id}/likes/${auth.currentUser.uid}`
+      `posts/${post.id}/likes/${currentUid}`
     );
-
-    post.likes?.[auth.currentUser.uid]
+    post.likes?.[currentUid]
       ? remove(likeRef)
       : set(likeRef, true);
   };
@@ -128,7 +157,7 @@ const Home = () => {
     if (!commentText[postId]) return;
 
     push(ref(db, `comments/${postId}`), {
-      uid: auth.currentUser.uid,
+      uid: currentUid,
       name: auth.currentUser.displayName,
       text: commentText[postId],
       createdAt: Date.now(),
@@ -137,12 +166,18 @@ const Home = () => {
     setCommentText({ ...commentText, [postId]: "" });
   };
 
+  /* ================= DELETE COMMENT ================= */
+  const handleDeleteComment = async (postId, comment) => {
+    if (comment.uid !== currentUid) return;
+    await remove(ref(db, `comments/${postId}/${comment.id}`));
+  };
+
   return (
     <div className="h-screen bg-gray-100 flex justify-center overflow-hidden">
       <div className="w-full max-w-[680px] h-full flex flex-col">
 
         {/* ================= STORY BAR ================= */}
-        <div className="bg-white p-3 shadow flex gap-4 overflow-x-auto scrollbar-hide">
+        <div className="bg-white p-3 shadow flex gap-4 overflow-x-auto">
           <AddStory />
 
           {storyGroups.map((user, i) => (
@@ -157,7 +192,7 @@ const Home = () => {
               <div className="p-[2px] rounded-full bg-gradient-to-tr from-pink-500 to-yellow-400">
                 <img
                   src={user.userPhoto}
-                  className="w-16 h-16 rounded-full object-cover border-2 border-white"
+                  className="w-16 h-16 rounded-full border-2 border-white object-cover"
                 />
               </div>
               <p className="text-xs mt-1 truncate w-16 text-center">
@@ -167,9 +202,8 @@ const Home = () => {
           ))}
         </div>
 
-        {/* ================= FEED (ONLY THIS SCROLLS) ================= */}
+        {/* ================= FEED ================= */}
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4">
-
           {/* CREATE POST */}
           <div className="bg-white p-4 rounded-xl shadow">
             <textarea
@@ -179,23 +213,32 @@ const Home = () => {
               className="w-full bg-gray-100 rounded-xl px-4 py-2 resize-none"
             />
 
-            {postImage && (
-              <img
-                src={URL.createObjectURL(postImage)}
-                className="rounded-lg mt-2"
-              />
-            )}
-
             <div className="flex justify-between items-center mt-3">
-              <label className="cursor-pointer text-blue-600">
-                <FaImage />
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  onChange={(e) => setPostImage(e.target.files[0])}
-                />
-              </label>
+              <div className="flex gap-4 text-blue-600">
+                <label className="cursor-pointer">
+                  <FaImage />
+                  <input
+                    type="file"
+                    hidden
+                    accept="image/*"
+                    onChange={(e) =>
+                      setPostImage(e.target.files[0])
+                    }
+                  />
+                </label>
+
+                <label className="cursor-pointer">
+                  <FaVideo />
+                  <input
+                    type="file"
+                    hidden
+                    accept="video/*"
+                    onChange={(e) =>
+                      setPostVideo(e.target.files[0])
+                    }
+                  />
+                </label>
+              </div>
 
               <button
                 onClick={handlePost}
@@ -209,23 +252,47 @@ const Home = () => {
           {/* POSTS */}
           {posts.map((post) => (
             <div key={post.id} className="bg-white p-4 rounded-xl shadow">
-              <div className="flex items-center gap-3 mb-2">
-                <img
-                  src={post.userPhoto}
-                  className="w-10 h-10 rounded-full"
-                />
+              <div className="flex justify-between items-start">
                 <div>
                   <p className="font-semibold">{post.userName}</p>
                   <p className="text-xs text-gray-500">
                     {moment(post.createdAt).fromNow()}
                   </p>
                 </div>
+
+                {post.uid === currentUid && (
+                  <button
+                    onClick={() => handleDeletePost(post)}
+                    className="text-red-600"
+                  >
+                    <FaTrash />
+                  </button>
+                )}
               </div>
 
-              {post.text && <p>{post.text}</p>}
+              {post.text && <p className="mt-2">{post.text}</p>}
 
               {post.image && (
-                <img src={post.image} className="rounded-lg my-2" />
+                <img
+                  src={post.image}
+                  className="rounded-lg my-3 w-full"
+                />
+              )}
+
+              {post.video && (
+                <video
+                  src={post.video}
+                  controls
+                  className="rounded-lg my-3 w-full"
+                />
+              )}
+
+              {post.youtubeId && (
+                <iframe
+                  className="w-full h-64 rounded-lg my-3"
+                  src={`https://www.youtube.com/embed/${post.youtubeId}`}
+                  allowFullScreen
+                />
               )}
 
               <button
@@ -233,20 +300,46 @@ const Home = () => {
                 className="flex items-center gap-2 text-blue-600 mt-2"
               >
                 <FaThumbsUp />
-                {post.likes ? Object.keys(post.likes).length : 0}
+                {post.likes
+                  ? Object.keys(post.likes).length
+                  : 0}
               </button>
 
-              {comments[post.id]?.map((c, i) => (
-                <p key={i} className="text-sm mt-1">
-                  <b>{c.name}</b> {c.text}
-                </p>
-              ))}
+              {/* COMMENTS */}
+              {comments[post.id]
+                ?.slice(showAllComments[post.id] ? 0 : -1)
+                .map((c) => (
+                  <div
+                    key={c.id}
+                    className="flex justify-between text-sm mt-1"
+                  >
+                    <p>
+                      <b>{c.name}</b> {c.text}
+                    </p>
+                    {c.uid === currentUid && (
+                      <button
+                        onClick={() =>
+                          handleDeleteComment(post.id, c)
+                        }
+                        className="text-red-500 text-xs"
+                      >
+                        <FaTrash />
+                      </button>
+                    )}
+                  </div>
+                ))}
 
               <div className="flex gap-2 mt-2">
                 <input
                   className="flex-1 bg-gray-100 rounded-full px-3 py-1"
                   placeholder="Write a comment..."
                   value={commentText[post.id] || ""}
+                  onClick={() =>
+                    setShowAllComments({
+                      ...showAllComments,
+                      [post.id]: true,
+                    })
+                  }
                   onChange={(e) =>
                     setCommentText({
                       ...commentText,
