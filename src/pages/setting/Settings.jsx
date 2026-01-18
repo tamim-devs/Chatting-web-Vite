@@ -120,8 +120,8 @@ const Settings = () => {
         <div className="space-y-6 lg:col-span-1">
 
           {/* PROFILE */}
-          <div className="bg-white rounded-2xl shadow p-5 flex flex-col items-center gap-3">
-            <div className="relative w-24 h-24 rounded-full overflow-hidden group">
+          <div className="bg-white  b rounded-2xl shadow p-5 flex flex-col items-center gap-3">
+            <div style={{backgroundSize:"60px"}} className="relative bg-[url('src/assets/chat/avatar.png')] bg-center bg-no-repeat  w-24 h-24 rounded-full overflow-hidden group">
               <img
                 src={user?.photoURL}
                 className="w-full h-full object-cover"

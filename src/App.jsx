@@ -9,6 +9,8 @@ import Settings from "./pages/setting/Settings";
 import PrivateRoute from "./components/PrivateRoute";
 import { listenForegroundMessage } from "./utility/firebaseMessaging";
 import MyPost from "./pages/setting/MyPost";
+import Meet from "./meet/Meet";
+import AudioCall from "./meet/AudioCall";
 
 const App = () => {
   useEffect(() => {
@@ -32,6 +34,8 @@ const App = () => {
         <Route path="/chat" element={<Chat />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/mypost" element={<MyPost/>} />
+        <Route path="/meet" element={<Meet/>}  />
+        <Route path="/call" element={<AudioCall/>}  />
       </Route>
 
       <Route path="*" element={<Navigate to="/login" replace />} />
