@@ -13,6 +13,15 @@ import { clearFriend } from "../../Features/FriendSlice/FriendSlice";
 import { uploadToCloudinary } from "../../utility/cloudinaryUpload";
 import AudioCall from "../../meet/AudioCall";
 
+/* ================= HELPER: DETECT JITSI LINK ================= */
+const getMeetRoomFromText = (text) => {
+  if (!text) return null;
+  const match = text.match(
+    /(https:\/\/meet\.jit\.si\/([a-zA-Z0-9-_]+))/
+  );
+  return match ? match[2] : null;
+};
+
 const ChatRight = () => {
   const dispatch = useDispatch();
   const bottomRef = useRef(null);
@@ -96,7 +105,6 @@ const ChatRight = () => {
           >
             End Call ✖
           </button>
-
           <iframe
             src={`https://meet.jit.si/${meetRoom}`}
             allow="camera; microphone; fullscreen; display-capture"
@@ -109,69 +117,84 @@ const ChatRight = () => {
       <AudioCall room={audioRoom} onEnd={() => setAudioRoom(null)} />
 
       {/* ================= HEADER ================= */}
-      <div className="fixed top-0 left-0 right-0 z-20 flex items-center gap-3 px-3 py-2 border-b bg-white">
-        <button
-          onClick={() => dispatch(clearFriend())}
-          className="md:hidden text-xl"
-        >
-          <IoArrowBack />
-        </button>
+      <div className="fixed top-0 left-0 right-0 z-20 bg-white border-b">
+        <div className="flex items-center gap-3 px-3 py-2 sm:px-4 sm:py-3">
+          <button
+            onClick={() => dispatch(clearFriend())}
+            className="md:hidden text-xl flex-shrink-0"
+          >
+            <IoArrowBack />
+          </button>
 
-        <img
-          src={friendsItem.profile_picture || avatar}
-          className="w-9 h-9 rounded-full"
-        />
-
-        <h3 className="font-semibold text-sm truncate flex-1">
-          {friendsItem.name}
-        </h3>
-
-        <div className="flex gap-4 text-xl">
-          <FaVideo
-            className="cursor-pointer"
-            onClick={() => setMeetRoom(roomId)}
+          <img
+            src={friendsItem.profile_picture || avatar}
+            className="w-9 h-9 sm:w-10 sm:h-10 rounded-full"
           />
-          <FaPhoneAlt
-            className="cursor-pointer"
-            onClick={() => setAudioRoom(roomId)}
-          />
+
+          <h3 className="font-semibold text-sm sm:text-base truncate flex-1">
+            {friendsItem.name}
+          </h3>
+
+          <div className="flex gap-4 text-xl">
+            <FaVideo
+              className="cursor-pointer"
+              onClick={() => setMeetRoom(roomId)}
+            />
+            <FaPhoneAlt
+              className="cursor-pointer"
+              onClick={() => setAudioRoom(roomId)}
+            />
+          </div>
         </div>
       </div>
 
       {/* ================= MESSAGE ================= */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 pt-[70px] pb-[100px] space-y-2">
-        {allMsg.map((m) => (
-          <div
-            key={m.key}
-            className={`max-w-[80%] ${
-              m.whoSendMsgUId === auth.currentUser.uid
-                ? "ml-auto text-right"
-                : ""
-            }`}
-          >
-            {m.image && (
-              <img
-                src={m.image}
-                className="max-w-[220px] rounded-xl mb-1"
-              />
-            )}
+      <div className="flex-1 overflow-y-auto px-3 py-4 pt-[72px] pb-[96px] space-y-2">
+        {allMsg.map((m) => {
+          const room = getMeetRoomFromText(m.msg);
 
-            {m.msg && (
-              <div className="bg-blue-600 text-white px-4 py-2 rounded-2xl text-sm break-words">
-                {m.msg}
-              </div>
-            )}
+          return (
+            <div
+              key={m.key}
+              className={`max-w-[80%] ${
+                m.whoSendMsgUId === auth.currentUser.uid
+                  ? "ml-auto text-right"
+                  : ""
+              }`}
+            >
+              {m.image && (
+                <img
+                  src={m.image}
+                  className="max-w-[220px] rounded-xl mb-1"
+                />
+              )}
 
-            <p className="text-[10px] text-gray-400 mt-1">
-              {moment(m.createdAt).fromNow()}
-            </p>
-          </div>
-        ))}
+              {m.msg && room ? (
+                <button
+                  onClick={() => setMeetRoom(room)}
+                  className="bg-green-600 text-white px-4 py-2 rounded-2xl text-sm"
+                >
+                  📞 Join Call
+                </button>
+              ) : (
+                m.msg && (
+                  <div className="bg-blue-600 text-white px-4 py-2 rounded-2xl text-sm break-words">
+                    {m.msg}
+                  </div>
+                )
+              )}
+
+              <p className="text-[10px] text-gray-400 mt-1">
+                {moment(m.createdAt).fromNow()}
+              </p>
+            </div>
+          );
+        })}
         <div ref={bottomRef} />
       </div>
 
       {/* ================= INPUT ================= */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white p-2">
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t p-2">
         <div className="flex items-center gap-2 relative">
           <button onClick={() => setShowEmoji(!showEmoji)}>
             <CiFaceSmile />
