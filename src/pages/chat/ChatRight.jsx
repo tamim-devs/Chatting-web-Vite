@@ -23,11 +23,14 @@ const ChatRight = () => {
   const [showEmoji, setShowEmoji] = useState(false);
   const [image, setImage] = useState(null);
 
-  const [meetRoom, setMeetRoom] = useState(null);
-  const [audioRoom, setAudioRoom] = useState(null);
+  const [meetRoom, setMeetRoom] = useState(null);   // video
+  const [audioRoom, setAudioRoom] = useState(null); // audio
 
-  const roomId = `${auth.currentUser.uid}-${friendsItem?.id}`;
+  const roomId = friendsItem
+    ? `${auth.currentUser.uid}-${friendsItem.id}`
+    : null;
 
+  /* ================= FETCH CHAT ================= */
   useEffect(() => {
     if (!friendsItem?.id) return;
 
@@ -53,6 +56,26 @@ const ChatRight = () => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [allMsg]);
 
+  /* ================= SEND MESSAGE ================= */
+  const sendMessage = async () => {
+    if (!inputValue && !image) return;
+
+    let imageURL = "";
+    if (image) imageURL = await uploadToCloudinary(image);
+
+    await push(ref(db, "singleMsg"), {
+      whoSendMsgUId: auth.currentUser.uid,
+      whoRecivedMsgUid: friendsItem.id,
+      msg: inputValue,
+      image: imageURL,
+      createdAt: Date.now(),
+    });
+
+    setInputValue("");
+    setImage(null);
+    setShowEmoji(false);
+  };
+
   if (!friendsItem?.id) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400">
@@ -62,74 +85,79 @@ const ChatRight = () => {
   }
 
   return (
-    <div className="relative flex flex-col h-screen w-full bg-white">
+    <div className="relative flex flex-col h-[100dvh] bg-white">
 
-      {/* HEADER */}
- <div className="fixed top-0 z-20
-    flex items-center
-    px-2 sm:px-4
-    py-2 sm:py-3
-    gap-2 sm:gap-3
-     bg-white w-full">
-     <div
-  className="
-      sticky top-0 z-20
-    flex items-center
-    px-2 sm:px-4
-    py-2 sm:py-3
-    gap-2 sm:gap-3
-     bg-white
-  "
->
-  {/* Back button (mobile only) */}
-  <button
-    onClick={() => dispatch(clearFriend())}
-    className="md:hidden text-lg sm:text-xl flex-shrink-0"
-  >
-    <IoArrowBack />
-  </button>
+      {/* ================= VIDEO CALL ================= */}
+      {meetRoom && (
+        <div className="fixed inset-0 z-[999] bg-black">
+          <button
+            onClick={() => setMeetRoom(null)}
+            className="absolute top-3 right-3 z-50 bg-red-600 text-white px-3 py-1 rounded"
+          >
+            End Call ✖
+          </button>
 
-  {/* Avatar */}
-  <img
-    src={friendsItem.profile_picture || avatar}
-    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex-shrink-0"
-  />
+          <iframe
+            src={`https://meet.jit.si/${meetRoom}`}
+            allow="camera; microphone; fullscreen; display-capture"
+            className="w-full h-full border-0"
+          />
+        </div>
+      )}
 
-  {/* Name */}
-  <span
-    className="
-      font-semibold
-      text-sm sm:text-base
-      truncate
-      flex-1
-      min-w-0
-    "
-  >
-    {friendsItem.name}
-  </span>
+      {/* ================= AUDIO CALL ================= */}
+      <AudioCall room={audioRoom} onEnd={() => setAudioRoom(null)} />
 
-  {/* Actions */}
-  <div className="flex gap-3 sm:gap-4 text-lg sm:text-xl flex-shrink-0">
-    <FaVideo className="cursor-pointer" />
-    <FaPhoneAlt className="cursor-pointer" />
-  </div>
-</div>
- </div>
+      {/* ================= HEADER ================= */}
+      <div className="fixed top-0 left-0 right-0 z-20 flex items-center gap-3 px-3 py-2 border-b bg-white">
+        <button
+          onClick={() => dispatch(clearFriend())}
+          className="md:hidden text-xl"
+        >
+          <IoArrowBack />
+        </button>
 
+        <img
+          src={friendsItem.profile_picture || avatar}
+          className="w-9 h-9 rounded-full"
+        />
 
-      {/* MESSAGE */}
-      <div className="flex-1 overflow-y-auto px-2 sm:px-4 py-3 pt-[70px] pb-[110px] space-y-2">
+        <h3 className="font-semibold text-sm truncate flex-1">
+          {friendsItem.name}
+        </h3>
+
+        <div className="flex gap-4 text-xl">
+          <FaVideo
+            className="cursor-pointer"
+            onClick={() => setMeetRoom(roomId)}
+          />
+          <FaPhoneAlt
+            className="cursor-pointer"
+            onClick={() => setAudioRoom(roomId)}
+          />
+        </div>
+      </div>
+
+      {/* ================= MESSAGE ================= */}
+      <div className="flex-1 overflow-y-auto px-3 py-4 pt-[70px] pb-[100px] space-y-2">
         {allMsg.map((m) => (
           <div
             key={m.key}
-            className={`max-w-[85%] sm:max-w-[75%] ${
+            className={`max-w-[80%] ${
               m.whoSendMsgUId === auth.currentUser.uid
                 ? "ml-auto text-right"
                 : ""
             }`}
           >
+            {m.image && (
+              <img
+                src={m.image}
+                className="max-w-[220px] rounded-xl mb-1"
+              />
+            )}
+
             {m.msg && (
-              <div className="bg-blue-600 text-white px-3 sm:px-4 py-2 rounded-2xl text-sm break-words">
+              <div className="bg-blue-600 text-white px-4 py-2 rounded-2xl text-sm break-words">
                 {m.msg}
               </div>
             )}
@@ -142,14 +170,14 @@ const ChatRight = () => {
         <div ref={bottomRef} />
       </div>
 
-      {/* INPUT */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white p-2 sm:p-3">
-        <div className="flex items-center gap-2">
+      {/* ================= INPUT ================= */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 border-t bg-white p-2">
+        <div className="flex items-center gap-2 relative">
           <button onClick={() => setShowEmoji(!showEmoji)}>
             <CiFaceSmile />
           </button>
 
-          <label>
+          <label className="cursor-pointer">
             <FaCameraRetro />
             <input
               type="file"
@@ -162,23 +190,30 @@ const ChatRight = () => {
           <input
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
-            className="flex-1 bg-gray-100 px-3 sm:px-4 py-2 rounded-full text-sm"
+            className="flex-1 bg-gray-100 px-4 py-2 rounded-full text-sm"
             placeholder="Type message..."
           />
 
           <button
-            className="bg-blue-600 text-white p-2 sm:p-3 rounded-full"
+            onClick={sendMessage}
+            className="bg-blue-600 text-white p-3 rounded-full"
           >
             <IoIosSend />
           </button>
+
+          {showEmoji && (
+            <div className="absolute bottom-[60px] left-0 z-50">
+              <EmojiPicker
+                height={300}
+                width={280}
+                onEmojiClick={(e) =>
+                  setInputValue((prev) => prev + e.emoji)
+                }
+              />
+            </div>
+          )}
         </div>
       </div>
-
-      {showEmoji && (
-        <div className="absolute bottom-[80px] left-2 sm:left-4 z-50">
-          <EmojiPicker height={300} width={280} />
-        </div>
-      )}
     </div>
   );
 };
