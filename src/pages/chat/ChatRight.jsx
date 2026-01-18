@@ -65,28 +65,57 @@ const ChatRight = () => {
     <div className="relative flex flex-col h-screen w-full bg-white">
 
       {/* HEADER */}
-      <div className="fixed top-0 left-0 right-0 z-20 flex items-center gap-3 p-3 sm:p-4 border-b bg-white">
-        <button
-          onClick={() => dispatch(clearFriend())}
-          className="md:hidden text-xl"
-        >
-          <IoArrowBack />
-        </button>
+ <div className="fixed top-0 z-20
+    flex items-center
+    px-2 sm:px-4
+    py-2 sm:py-3
+    gap-2 sm:gap-3
+     bg-white w-full">
+     <div
+  className="
+      sticky top-0 z-20
+    flex items-center
+    px-2 sm:px-4
+    py-2 sm:py-3
+    gap-2 sm:gap-3
+     bg-white
+  "
+>
+  {/* Back button (mobile only) */}
+  <button
+    onClick={() => dispatch(clearFriend())}
+    className="md:hidden text-lg sm:text-xl flex-shrink-0"
+  >
+    <IoArrowBack />
+  </button>
 
-        <img
-          src={friendsItem.profile_picture || avatar}
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-full"
-        />
+  {/* Avatar */}
+  <img
+    src={friendsItem.profile_picture || avatar}
+    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex-shrink-0"
+  />
 
-        <h3 className="font-semibold text-sm sm:text-base truncate flex-1">
-          {friendsItem.name}
-        </h3>
+  {/* Name */}
+  <span
+    className="
+      font-semibold
+      text-sm sm:text-base
+      truncate
+      flex-1
+      min-w-0
+    "
+  >
+    {friendsItem.name}
+  </span>
 
-        <div className="flex gap-3 sm:gap-4 text-lg sm:text-xl">
-          <FaVideo className="cursor-pointer" />
-          <FaPhoneAlt className="cursor-pointer" />
-        </div>
-      </div>
+  {/* Actions */}
+  <div className="flex gap-3 sm:gap-4 text-lg sm:text-xl flex-shrink-0">
+    <FaVideo className="cursor-pointer" />
+    <FaPhoneAlt className="cursor-pointer" />
+  </div>
+</div>
+ </div>
+
 
       {/* MESSAGE */}
       <div className="flex-1 overflow-y-auto px-2 sm:px-4 py-3 pt-[70px] pb-[110px] space-y-2">
