@@ -4,24 +4,28 @@ import Friends from "../../components/HomeComponents/HomeRight/Friends/Friends";
 
 const ChatLeft = () => {
   return (
-    <div
+    <aside
       className="
-        w-full
-        lg:w-[360px]           /* Desktop fixed sidebar */
-        h-full
-        lg:h-screen
+        w-full                     /* Mobile: full width */
+        sm:w-full
+        md:w-[320px]               /* Tablet */
+        lg:w-[360px]               /* Desktop sidebar width */
+        h-screen                   /* Full height */
         bg-gray-100
         p-3
         sm:p-4
+        border-r                   /* Sidebar look */
         overflow-y-auto
       "
     >
       {/* Search */}
-   
+      {/* <div className="mb-3">
+        <Search />
+      </div> */}
 
       {/* Friends list */}
       <Friends isChatC={true} />
-    </div>
+    </aside>
   );
 };
 
