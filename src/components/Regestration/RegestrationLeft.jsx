@@ -139,7 +139,7 @@ const RegestrationLeft = () => {
       >
         <div className="text-center flex flex-col items-center ">
           <div className="w-40">
-            <img src="/public/pwa-192x192.png" alt="logo" />
+          
           </div>
           <h1 className="text-3xl font-extrabold text-slate-900">
             Create your account
