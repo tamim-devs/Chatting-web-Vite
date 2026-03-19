@@ -8,15 +8,14 @@ exports.sendMessageNotification = functions.database
   .ref("/singleMsg/{msgId}")
   .onCreate(async (snapshot) => {
     const msg = snapshot.val();
-
     const receiverId = msg.whoRecivedMsgUid;
 
-    const userSnap = await admin
+    const tokenSnap = await admin
       .database()
-      .ref(`users/${receiverId}`)
+      .ref(`fcmTokens/${receiverId}`)
       .once("value");
 
-    const token = userSnap.val()?.fcmToken;
+    const token = tokenSnap.val();
     if (!token) return null;
 
     return admin.messaging().sendToDevice(token, {
@@ -27,18 +26,19 @@ exports.sendMessageNotification = functions.database
     });
   });
 
-/* ❤️ STORY LIKE */
+/* ❤️ STORY LIKE NOTIFICATION */
 exports.storyLikeNotification = functions.database
   .ref("/storyLikes/{likeId}")
   .onCreate(async (snapshot) => {
     const data = snapshot.val();
+    const receiverId = data.storyOwnerUid;
 
-    const userSnap = await admin
+    const tokenSnap = await admin
       .database()
-      .ref(`users/${data.storyOwnerUid}`)
+      .ref(`fcmTokens/${receiverId}`)
       .once("value");
 
-    const token = userSnap.val()?.fcmToken;
+    const token = tokenSnap.val();
     if (!token) return null;
 
     return admin.messaging().sendToDevice(token, {
@@ -49,24 +49,59 @@ exports.storyLikeNotification = functions.database
     });
   });
 
-/* 💬 STORY REPLY */
+/* 💬 STORY REPLY NOTIFICATION */
 exports.storyReplyNotification = functions.database
   .ref("/storyReplies/{replyId}")
   .onCreate(async (snapshot) => {
     const data = snapshot.val();
+    const receiverId = data.storyOwnerUid;
 
-    const userSnap = await admin
+    const tokenSnap = await admin
       .database()
-      .ref(`users/${data.storyOwnerUid}`)
+      .ref(`fcmTokens/${receiverId}`)
       .once("value");
 
-    const token = userSnap.val()?.fcmToken;
+    const token = tokenSnap.val();
     if (!token) return null;
 
     return admin.messaging().sendToDevice(token, {
       notification: {
         title: "💬 Story Reply",
         body: `${data.senderName} replied to your story`,
+      },
+    });
+  });
+
+/* 📢 POST NOTIFICATION (FOR ALL USERS EXCEPT OWNER) */
+exports.postNotification = functions.database
+  .ref("/posts/{postId}")
+  .onCreate(async (snapshot) => {
+    const post = snapshot.val();
+
+    const tokensSnap = await admin
+      .database()
+      .ref("fcmTokens")
+      .once("value");
+
+    const tokens = [];
+
+    tokensSnap.forEach((child) => {
+      if (child.key !== post.uid) {
+        const token = child.val();
+        if (token) tokens.push(token);
+      }
+    });
+
+    console.log("TOKENS:", tokens);
+
+    if (tokens.length === 0) return null;
+
+    return admin.messaging().sendToDevice(tokens, {
+      notification: {
+        title: `${post.userName || "Someone"} posted`,
+        body: post.text
+          ? post.text.substring(0, 100)
+          : "New post added",
       },
     });
   });

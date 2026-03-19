@@ -44,6 +44,17 @@ const App = () => {
 
     listenForegroundMessage();
 
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/firebase-messaging-sw.js")
+        .then(() => {
+          console.log("Firebase service worker registered");
+        })
+        .catch((err) => {
+          console.error("Service worker registration failed:", err);
+        });
+    }
+
     return () => unsubscribe();
   }, []);
 
