@@ -160,38 +160,32 @@ const LoginLeft = () => {
   return (
     <div className="relative min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-slate-900 via-indigo-900 to-sky-700">
 
-      {/* 🔥 PWA BUTTON */}
-      {isInstallable && (
-        <div
-          onClick={handleInstall}
-          className="w-28 flex flex-col items-center justify-center h-28 top-10 absolute rounded-full bg-blue-500 cursor-pointer"
-        >
-          <MdFileDownload color="white" size={32} />
-          <h2 className="text-white text-sm font-semibold">
-            Download App
-          </h2>
-        </div>
-      )}
+     
 
       <ToastContainer position="top-right" />
 
       <form
         onSubmit={handleSubmit}
-        className="w-full max-w-xl bg-white rounded-3xl shadow-2xl p-8"
+        className="w-full flex items-center justify-center flex-col max-w-xl bg-white rounded-3xl shadow-2xl p-8"
       >
-        <h1 className="text-3xl font-bold text-center mb-6">
+        <h1 className="text-3xl  font-bold text-center mb-6">
           {resetMode ? "Reset Password" : "Welcome Back"}
         </h1>
-
+        
         {/* GOOGLE */}
         {!resetMode && (
-          <button
-            type="button"
-           
-            className="w-full flex items-center justify-center gap-2 border py-3 rounded-xl mb-4"
-          >
-          
-          </button>
+         <>
+          {/* 🔥 PWA BUTTON */}
+              <div
+  onClick={handleInstall}
+  className="w-20 flex flex-col items-center justify-center h-20   rounded-full bg-blue-500 cursor-pointer"
+>
+  <MdFileDownload color="white" size={32} />
+</div>
+  <p className="text-black text-sm font-semibold">
+    Download App
+  </p>
+         </>
         )}
 
         {/* EMAIL */}
