@@ -3,14 +3,14 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
-  base: "/", // ✅ MUST for Vercel
+  base: "/", 
   plugins: [
     react(),
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
-        name: "Chatting App",
-        short_name: "ChatApp",
+        name: "Meher Ali Family",
+        short_name: "Meher Ali Family",
         start_url: "/",
         scope: "/",
         display: "standalone",
