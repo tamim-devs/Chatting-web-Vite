@@ -165,19 +165,19 @@ const Settings = () => {
 
       {/* 🔥 QUICK ACTION */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <NavLink to="/my-posts">
 
         <button className="bg-white p-3 rounded-xl shadow text-sm">
           My Posts
         </button>
+      </NavLink>
 
         <label className="bg-white p-3 rounded-xl shadow text-sm cursor-pointer text-center">
           Upload Story
           <input type="file" hidden onChange={handleStoryUpload} />
         </label>
 
-        <button className="bg-white p-3 rounded-xl shadow text-sm">
-          Edit Profile
-        </button>
+       
 
       </div>
 
