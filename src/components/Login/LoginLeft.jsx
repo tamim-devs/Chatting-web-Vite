@@ -54,18 +54,30 @@ const LoginLeft = () => {
       window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  const handleInstall = async () => {
-    if (!deferredPrompt) {
-      alert("App already installed or not supported");
-      return;
-    }
-
+ const handleInstall = async () => {
+  // ✅ Case 1: Browser allow করছে → direct popup
+  if (deferredPrompt) {
     deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
+
+    const { outcome } = await deferredPrompt.userChoice;
+
+    if (outcome === "accepted") {
+      console.log("Installed");
+    } else {
+      console.log("Cancelled");
+    }
 
     setDeferredPrompt(null);
     setIsInstallable(false);
-  };
+  } else {
+    // ⚠️ Case 2: Browser allow করে নাই
+    // 👉 fallback UX (best possible)
+
+    alert(
+      "📱 App install korte:\n\n👉 Chrome 3 dot menu te jan\n👉 'Add to Home Screen' e click korun"
+    );
+  }
+};;
 
   // ================= INPUT =================
   const handleInput = (e) => {
