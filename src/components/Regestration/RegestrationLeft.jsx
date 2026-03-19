@@ -13,7 +13,7 @@ import { getDatabase, ref, set } from "firebase/database";
 import { ToastContainer } from "react-toastify";
 import { ErrorToast, SucessToast } from "../utils/Toast";
 import { NavLink, useNavigate } from "react-router-dom";
-import { FaEye, FaRegEyeSlash } from "react-icons/fa";
+import { FaEye, FaRegEyeSlash, FaUserCircle } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
 import { uploadToCloudinary } from "../../utility/cloudinaryUpload";
 
@@ -157,10 +157,7 @@ const RegestrationLeft = () => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <img
-                    src="/src/assets/HomeAssets/HomeLeftAssets/avatar.gif"
-                    alt=""
-                  />
+                 <FaUserCircle />
                 )}
               </div>
 
