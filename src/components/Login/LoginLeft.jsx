@@ -22,10 +22,11 @@ const LoginLeft = () => {
   const auth = getAuth();
   const navigate = useNavigate();
 
-  // 🔥 PWA STATE
+  // 🔥 PWA
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallable, setIsInstallable] = useState(false);
 
+  // 🔐 Login state
   const [loginInput, setLoginInput] = useState({
     email: "",
     password: "",
@@ -40,7 +41,7 @@ const LoginLeft = () => {
     passwordError: "",
   });
 
-  // ================= PWA INSTALL =================
+  // ================= PWA =================
   useEffect(() => {
     const handler = (e) => {
       e.preventDefault();
@@ -49,8 +50,8 @@ const LoginLeft = () => {
     };
 
     window.addEventListener("beforeinstallprompt", handler);
-
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    return () =>
+      window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
   const handleInstall = async () => {
@@ -60,12 +61,7 @@ const LoginLeft = () => {
     }
 
     deferredPrompt.prompt();
-
-    const { outcome } = await deferredPrompt.userChoice;
-
-    if (outcome === "accepted") {
-      console.log("User installed");
-    }
+    await deferredPrompt.userChoice;
 
     setDeferredPrompt(null);
     setIsInstallable(false);
@@ -82,24 +78,17 @@ const LoginLeft = () => {
     const { email, password } = loginInput;
 
     if (!email || !EmailValidator(email)) {
-      setLoginError({
-        emailError: "Email is missing or invalid",
-        passwordError: "",
-      });
+      setLoginError({ emailError: "Invalid email", passwordError: "" });
       return;
     }
 
     if (!password) {
-      setLoginError({
-        emailError: "",
-        passwordError: "Password is missing",
-      });
+      setLoginError({ emailError: "", passwordError: "Password required" });
       return;
     }
 
     try {
       setLoading(true);
-
       const result = await signInWithEmailAndPassword(auth, email, password);
 
       SucessToast("Login Successful");
@@ -111,10 +100,9 @@ const LoginLeft = () => {
         }
       });
     } catch (error) {
-      ErrorToast("Login Failed: " + (error.message || ""));
+      ErrorToast(error.message);
     } finally {
       setLoading(false);
-      setLoginInput({ email: "", password: "" });
     }
   };
 
@@ -128,10 +116,7 @@ const LoginLeft = () => {
     const { email } = loginInput;
 
     if (!email || !EmailValidator(email)) {
-      setLoginError({
-        emailError: "Please enter a valid email",
-        passwordError: "",
-      });
+      setLoginError({ emailError: "Enter valid email", passwordError: "" });
       return;
     }
 
@@ -140,7 +125,6 @@ const LoginLeft = () => {
       await sendPasswordResetEmail(auth, email);
       SucessToast("Reset link sent");
       setResetMode(false);
-      setLoginInput({ email: "", password: "" });
     } catch (error) {
       ErrorToast(error.message);
     } finally {
@@ -174,65 +158,117 @@ const LoginLeft = () => {
   };
 
   return (
-    <>
-      <div className="relative min-h-screen flex items-center justify-center px-4 py-10 bg-gradient-to-br from-slate-900 via-indigo-900 to-sky-700">
+    <div className="relative min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-slate-900 via-indigo-900 to-sky-700">
 
-        {/* 🔥 PWA DOWNLOAD BUTTON */}
-        {isInstallable && (
-          <div
-            onClick={handleInstall}
-            className="w-28 flex flex-col items-center justify-center h-28 top-10 absolute rounded-full bg-blue-500 cursor-pointer"
+      {/* 🔥 PWA BUTTON */}
+      {isInstallable && (
+        <div
+          onClick={handleInstall}
+          className="w-28 flex flex-col items-center justify-center h-28 top-10 absolute rounded-full bg-blue-500 cursor-pointer"
+        >
+          <MdFileDownload color="white" size={32} />
+          <h2 className="text-white text-sm font-semibold">
+            Download App
+          </h2>
+        </div>
+      )}
+
+      <ToastContainer position="top-right" />
+
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-xl bg-white rounded-3xl shadow-2xl p-8"
+      >
+        <h1 className="text-3xl font-bold text-center mb-6">
+          {resetMode ? "Reset Password" : "Welcome Back"}
+        </h1>
+
+        {/* GOOGLE */}
+        {!resetMode && (
+          <button
+            type="button"
+            onClick={handleLoginWithGoogle}
+            className="w-full flex items-center justify-center gap-2 border py-3 rounded-xl mb-4"
           >
-            <MdFileDownload color="white" size={32} />
-            <h2 className="text-white text-sm font-semibold">
-              Download App
-            </h2>
-          </div>
+            <FcGoogle /> Continue with Google
+          </button>
         )}
 
-        <ToastContainer position="top-right" />
+        {/* EMAIL */}
+        <input
+          id="email"
+          value={loginInput.email}
+          onChange={handleInput}
+          placeholder="Email"
+          className="w-full h-12 px-4 border rounded-xl mb-2"
+        />
+        <p className="text-xs text-red-500">{loginError.emailError}</p>
 
-        <form
-          onSubmit={handleSubmit}
-          className="w-full max-w-xl bg-white rounded-3xl shadow-2xl p-7 sm:p-10"
-        >
-          <h1 className="text-3xl font-bold text-center mb-6">
-            {resetMode ? "Reset Password" : "Welcome Back"}
-          </h1>
-
-          <input
-            id="email"
-            value={loginInput.email}
-            onChange={handleInput}
-            placeholder="Email"
-            className="w-full h-12 px-4 border rounded-xl mb-2"
-          />
-          <p className="text-xs text-red-500">{loginError.emailError}</p>
-
-          {!resetMode && (
-            <>
+        {/* PASSWORD */}
+        {!resetMode && (
+          <>
+            <div className="relative">
               <input
                 type={eye ? "text" : "password"}
                 id="password"
                 value={loginInput.password}
                 onChange={handleInput}
                 placeholder="Password"
-                className="w-full h-12 px-4 border rounded-xl mb-2"
+                className="w-full h-12 px-4 border rounded-xl"
               />
-              <p className="text-xs text-red-500">{loginError.passwordError}</p>
+              <button
+                type="button"
+                onClick={() => setEye(!eye)}
+                className="absolute right-3 top-1/2 -translate-y-1/2"
+              >
+                {eye ? <FaRegEyeSlash /> : <FaEye />}
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setResetMode(true)}
+              className="text-sm text-indigo-600 mt-2"
+            >
+              Forgot password?
+            </button>
+
+            <p className="text-xs text-red-500">{loginError.passwordError}</p>
+          </>
+        )}
+
+        {/* SUBMIT */}
+        <button className="w-full h-12 bg-indigo-600 text-white rounded-xl mt-4">
+          {loading ? (
+            <ClipLoader color="#fff" size={20} />
+          ) : resetMode ? (
+            "Send Reset Link"
+          ) : (
+            "Sign In"
+          )}
+        </button>
+
+        {/* SIGN UP */}
+        <p className="text-center mt-4">
+          {resetMode ? (
+            <button
+              type="button"
+              onClick={() => setResetMode(false)}
+              className="text-indigo-600"
+            >
+              Back to login
+            </button>
+          ) : (
+            <>
+              Don’t have an account?{" "}
+              <NavLink to="/regestration" className="text-indigo-600">
+                Sign up
+              </NavLink>
             </>
           )}
-
-          <button className="w-full h-12 bg-indigo-600 text-white rounded-xl mt-4">
-            {loading ? <ClipLoader color="#fff" size={20} /> : "Sign In"}
-          </button>
-
-          <p className="text-center mt-4">
-            <NavLink to="/regestration">Create account</NavLink>
-          </p>
-        </form>
-      </div>
-    </>
+        </p>
+      </form>
+    </div>
   );
 };
 
