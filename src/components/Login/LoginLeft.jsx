@@ -187,10 +187,10 @@ const LoginLeft = () => {
         {!resetMode && (
           <button
             type="button"
-            onClick={handleLoginWithGoogle}
+           
             className="w-full flex items-center justify-center gap-2 border py-3 rounded-xl mb-4"
           >
-            <FcGoogle /> Continue with Google
+          
           </button>
         )}
 
