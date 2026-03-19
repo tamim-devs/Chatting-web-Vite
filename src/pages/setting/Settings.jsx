@@ -164,12 +164,12 @@ const Settings = () => {
       </div>
 
       {/* 🔥 QUICK ACTION */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-      <NavLink to="/my-posts">
+      <div className="grid grid-cols-2 sm:grid-cols-3  gap-1">
+      <NavLink className="bg-white p-3 rounded-xl shadow text-sm" to="/mypost">
 
-        <button className="bg-white p-3 rounded-xl shadow text-sm">
+    
           My Posts
-        </button>
+      
       </NavLink>
 
         <label className="bg-white p-3 rounded-xl shadow text-sm cursor-pointer text-center">
