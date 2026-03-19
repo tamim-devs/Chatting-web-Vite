@@ -158,12 +158,12 @@ const LoginLeft = () => {
       >
         <div className="text-center">
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">
-            {resetMode ? "Reset Password" : "Welcome Back"}
+            {resetMode ? "Reset Password" : "Meher Ali family"}
           </h1>
           <p className="mt-2 text-sm text-slate-600">
             {resetMode
               ? "Enter your email to receive a password reset link."
-              : "Sign in to continue to your chat account."}
+              : "Sign in to continue to your social account."}
           </p>
         </div>
 
