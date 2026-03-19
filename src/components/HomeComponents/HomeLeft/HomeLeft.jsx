@@ -42,18 +42,25 @@ const HomeLeft = () => {
   };
 
   return (
-    <div
+  <div className="hidden">
+      <div
       className="
         fixed bottom-0 left-0 w-full h-20
-        lg:static lg:w-[104px] lg:h-screen
-        bg-blue-500
+        lg:static lg:w-[112px] lg:h-screen
+        bg-white shadow-lg lg:shadow-none
         flex lg:flex-col
         justify-around lg:justify-start
         items-center
         lg:py-8
+        border-t lg:border-t-0 lg:border-r border-slate-200
         z-50
       "
     >
+      {/* ================= LOGO ================= */}
+      <div className="hidden lg:flex flex-col items-center gap-4 mb-10">
+        <div className="text-xl font-bold text-slate-900">Insta</div>
+      </div>
+
       {/* ================= PROFILE + STORY ================= */}
       <div className="hidden lg:flex flex-col items-center gap-2 mb-10">
         <div
@@ -81,22 +88,35 @@ const HomeLeft = () => {
       </div>
 
       {/* ================= NAV ================= */}
-      <Link to="/home" className="text-3xl lg:text-4xl text-white">
+      <Link
+        to="/home"
+        className="text-2xl lg:text-3xl text-slate-700 hover:text-blue-600 transition"
+        aria-label="Home"
+      >
         <IoIosHome />
       </Link>
 
-      <Link to="/chat" className="text-3xl lg:text-4xl text-white">
+      <Link
+        to="/chat"
+        className="text-2xl lg:text-3xl text-slate-700 hover:text-blue-600 transition"
+        aria-label="Chat"
+      >
         <MdChat />
       </Link>
 
-      <Link to="/settings" className="text-3xl lg:text-4xl text-white">
+      <Link
+        to="/settings"
+        className="text-2xl lg:text-3xl text-slate-700 hover:text-blue-600 transition"
+        aria-label="Settings"
+      >
         <IoSettings />
       </Link>
 
       {/* LOGOUT */}
       <button
         onClick={handleLogout}
-        className="text-3xl lg:text-4xl text-white"
+        className="text-2xl lg:text-3xl text-slate-700 hover:text-red-500 transition"
+        aria-label="Logout"
       >
         <CiLogin />
       </button>
@@ -109,6 +129,7 @@ const HomeLeft = () => {
         />
       )}
     </div>
+  </div>
   );
 };
 

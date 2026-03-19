@@ -4,16 +4,21 @@ import { isChatOpen } from "./chatState";
 
 const messaging = getMessaging(app);
 
-// 🔑 GET TOKEN
+// 🔑 REQUEST PERMISSION + GET TOKEN
 export const requestPermissionAndToken = async () => {
   try {
     const permission = await Notification.requestPermission();
-    if (permission !== "granted") return null;
+
+    if (permission !== "granted") {
+      console.log("Permission denied");
+      return null;
+    }
 
     const token = await getToken(messaging, {
-      vapidKey: "BK11Gli3EnfVshnsldnxhMz4zSIAYMKgXYlqi_WrfZkLihgyJ9GhXgVpG_M5gBXHaGTdboc-V2dS8ccbSF5uRqk",
+      vapidKey:     "BK11Gli3EnfVshnsldnxhMz4zSIAYMKgXYlqi_WrfZkLihgyJ9GhXgVpG_M5gBXHaGTdboc-V2dS8ccbSF5uRqk",
     });
 
+    console.log("FCM Token:", token);
     return token;
   } catch (err) {
     console.error("FCM Error:", err);
@@ -21,7 +26,7 @@ export const requestPermissionAndToken = async () => {
   }
 };
 
-// 🔔 FOREGROUND LISTENER
+// 🔔 FOREGROUND MESSAGE LISTENER
 export const listenForegroundMessage = () => {
   onMessage(messaging, (payload) => {
     console.log("Foreground message:", payload);

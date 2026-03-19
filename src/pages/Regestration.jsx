@@ -9,9 +9,9 @@ const Regestration = () => {
       <RegestrationLeft />
 
       {/* Right side image / design */}
-     <div className="hidden lg:block">
-       <RegestrationRight  />
-     </div>
+      <div className="hidden lg:flex lg:flex-1">
+        <RegestrationRight />
+      </div>
     </div>
   );
 };

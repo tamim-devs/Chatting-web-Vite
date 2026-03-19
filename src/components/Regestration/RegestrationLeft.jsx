@@ -5,12 +5,17 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
   sendEmailVerification,
+  signInWithPopup,
+  GoogleAuthProvider,
 } from "firebase/auth";
 import { ClipLoader } from "react-spinners";
 import { getDatabase, ref, set } from "firebase/database";
 import { ToastContainer } from "react-toastify";
 import { ErrorToast, SucessToast } from "../utils/Toast";
 import { NavLink, useNavigate } from "react-router-dom";
+import { FaEye, FaRegEyeSlash } from "react-icons/fa";
+import { FcGoogle } from "react-icons/fc";
+import { uploadToCloudinary } from "../../utility/cloudinaryUpload";
 
 const RegestrationLeft = () => {
   const navigate = useNavigate();
@@ -21,13 +26,28 @@ const RegestrationLeft = () => {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
+  const [image, setImage] = useState(null);
 
   const [emailError, setEmailError] = useState("");
   const [fullNameError, setFullNameError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSignUp = async () => {
+  /* ================= IMAGE ================= */
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) setImage(file);
+  };
+
+  /* ================= SIGN UP ================= */
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+
+    if (!image) {
+      ErrorToast("প্রোফাইল ছবি আপলোড করুন");
+      return;
+    }
+
     if (!email || !EmailValidator(email)) {
       setEmailError("Email is missing or invalid");
       return;
@@ -49,16 +69,29 @@ const RegestrationLeft = () => {
       setFullNameError("");
       setPasswordError("");
 
-      const { user } = await createUserWithEmailAndPassword(auth, email, password);
+      const { user } = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
 
-      await updateProfile(user, { displayName: fullName });
+      // ✅ Upload Image
+      const imageURL = await uploadToCloudinary(image);
+
+      // ✅ Update Profile
+      await updateProfile(user, {
+        displayName: fullName,
+        photoURL: imageURL,
+      });
+
       await sendEmailVerification(user);
 
+      // ✅ Save DB
       await set(ref(db, `users/${user.uid}`), {
         userUid: user.uid,
         userEmail: user.email,
         userName: fullName,
-        photoUrl: "",
+        userPhotoUrl: imageURL,
       });
 
       SucessToast(`${fullName}, please verify your email`);
@@ -70,84 +103,152 @@ const RegestrationLeft = () => {
       setEmail("");
       setFullName("");
       setPassword("");
+      setImage(null);
+    }
+  };
+
+  /* ================= GOOGLE ================= */
+  const handleSignUpWithGoogle = async () => {
+    const provider = new GoogleAuthProvider();
+
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const { uid, email: userEmail, displayName, photoURL } = result.user;
+
+      SucessToast("Google login successful");
+      navigate("/home");
+
+      await set(ref(db, `users/${uid}`), {
+        userUid: uid,
+        userEmail,
+        userName: displayName || "No Name",
+        userPhotoUrl: photoURL || "",
+      });
+    } catch (error) {
+      ErrorToast(error.message);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 sm:px-6">
-      <ToastContainer />
+    <div className="min-h-screen flex items-center justify-center px-4 bg-gradient-to-br from-slate-900 via-indigo-900 to-sky-700">
+      <ToastContainer position="top-right" />
 
-      <div className="w-full max-w-md bg-white shadow-xl rounded-xl p-6 sm:p-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-center">
-          Get started with easy registration
-        </h1>
-        <p className="text-center text-gray-600 mt-1">
-          Free registration and enjoy our services
-        </p>
-
-        <div className="mt-6 space-y-5">
-          {/* Email */}
-          <div>
-            <label className="block text-sm font-semibold mb-1">Email</label>
-            <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full h-11 px-4 border rounded-md focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter your email"
-            />
-            <p className="text-red-500 text-sm">{emailError}</p>
+      <form
+        onSubmit={handleSignUp}
+        className="w-full max-w-md bg-white/90 rounded-3xl shadow-2xl p-7 sm:p-10"
+      >
+        <div className="text-center flex flex-col items-center ">
+          <div className="w-40">
+            <img src="/public/pwa-192x192.png" alt="logo" />
           </div>
+          <h1 className="text-3xl font-extrabold text-slate-900">
+            Create your account
+          </h1>
+        </div>
 
-          {/* Full Name */}
-          <div>
-            <label className="block text-sm font-semibold mb-1">Full Name</label>
-            <input
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full h-11 px-4 border rounded-md focus:ring-2 focus:ring-blue-500"
-              placeholder="Enter your full name"
-            />
-            <p className="text-red-500 text-sm">{fullNameError}</p>
-          </div>
+        <div className="mt-6 space-y-4">
+          {/* IMAGE */}
+          <div className="text-center">
+            <label className="cursor-pointer">
+              <div className="w-20 h-20 mx-auto rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                {image ? (
+                  <img
+                    src={URL.createObjectURL(image)}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <img
+                    src="/src/assets/HomeAssets/HomeLeftAssets/avatar.gif"
+                    alt=""
+                  />
+                )}
+              </div>
 
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-semibold mb-1">Password</label>
-            <div className="flex gap-2">
+              <span className="text-xs text-gray-500 block mt-1">
+                Upload Photo
+              </span>
+
               <input
-                type={eye ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full h-11 px-4 border rounded-md focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your password"
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={handleImageChange}
               />
-              <button
-                type="button"
-                onClick={() => setEye(!eye)}
-                className="text-sm font-semibold text-blue-600"
-              >
-                {eye ? "Hide" : "Show"}
-              </button>
-            </div>
-            <p className="text-red-500 text-sm">{passwordError}</p>
+            </label>
+
+            {/* 🔥 Bangla Message */}
+            {image ? (
+              <p className="text-xs text-green-600 mt-2">
+                ✅ ছবি আপলোড হয়েছে
+              </p>
+            ) : (
+              <p className="text-xs text-red-500 mt-2">
+                ⚠️ প্রোফাইল ছবি আপলোড করুন
+              </p>
+            )}
           </div>
 
+          {/* EMAIL */}
+          <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Email"
+            className="w-full h-12 px-4 border rounded-xl"
+          />
+          <p className="text-xs text-red-500">{emailError}</p>
+
+          {/* NAME */}
+          <input
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Full Name"
+            className="w-full h-12 px-4 border rounded-xl"
+          />
+          <p className="text-xs text-red-500">{fullNameError}</p>
+
+          {/* PASSWORD */}
+          <div className="relative">
+            <input
+              type={eye ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="w-full h-12 px-4 border rounded-xl"
+            />
+            <button
+              type="button"
+              onClick={() => setEye(!eye)}
+              className="absolute right-3 top-1/2 -translate-y-1/2"
+            >
+              {eye ? <FaRegEyeSlash /> : <FaEye />}
+            </button>
+          </div>
+          <p className="text-xs text-red-500">{passwordError}</p>
+
+          {/* 🔥 BUTTON */}
           <button
-            onClick={handleSignUp}
-            disabled={loading}
-            className="w-full h-12 bg-blue-600 text-white rounded-md font-semibold hover:bg-blue-700 transition"
+            disabled={!image || loading}
+            className={`w-full h-12 rounded-xl text-white ${
+              !image || loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-indigo-600 hover:bg-indigo-700"
+            }`}
           >
-            {loading ? <ClipLoader color="#fff" size={24} /> : "Sign Up"}
+            {loading ? (
+              <ClipLoader color="#fff" size={20} />
+            ) : (
+              "Create Account"
+            )}
           </button>
 
           <p className="text-center text-sm">
-            Already have an account?{" "}
-            <NavLink to="/" className="text-yellow-600 font-semibold">
-              Sign In
+            Already have account?{" "}
+            <NavLink to="/" className="text-indigo-600">
+              Login
             </NavLink>
           </p>
         </div>
-      </div>
+      </form>
     </div>
   );
 };

@@ -1,40 +1,51 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import ChatLeft from "./ChatLeft";
 import ChatRight from "./ChatRight";
 import { useSelector } from "react-redux";
 
 const Chat = () => {
   const { friendsItem } = useSelector((state) => state.friendStore);
+  const [view, setView] = useState("list");
+
+  useEffect(() => {
+    if (friendsItem?.id) {
+      setView("chat");
+    } else {
+      setView("list");
+    }
+  }, [friendsItem]);
 
   return (
-    <div className="flex w-full h-screen overflow-hidden">
+    <div className="flex flex-col md:flex-row w-full min-h-[calc(100vh-56px)] bg-[#fafafa]">
 
-      {/* LEFT */}
+      {/* LEFT (friend list) */}
       <div
-        className={`
-          w-full
-          sm:w-full
-          md:w-[35%]
-          lg:w-[30%]
-          border-r
-          ${friendsItem?.id ? "hidden md:block" : "block"}
-        `}
+        className={
+          `
+            w-full
+            md:w-[35%]
+            lg:w-[30%]
+            border-r
+            ${view === "chat" ? "hidden md:block" : "block"}
+          `
+        }
       >
         <ChatLeft />
       </div>
 
-      {/* RIGHT */}
+      {/* RIGHT (chat) */}
       <div
-        className={`
-          w-full
-          sm:w-full
-          md:w-[65%]
-          lg:w-[70%]
-          flex flex-col
-          ${!friendsItem?.id ? "hidden md:flex" : "flex"}
-        `}
+        className={
+          `
+            w-full
+            md:w-[65%]
+            lg:w-[70%]
+            flex flex-col
+            ${view === "list" ? "hidden md:flex" : "flex"}
+          `
+        }
       >
-        <ChatRight />
+        <ChatRight onBack={() => setView("list")} />
       </div>
 
     </div>

@@ -9,7 +9,7 @@ const Login = () => {
       <LoginLeft />
 
       {/* Right: Image / Animation */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:flex lg:flex-1">
         <LoginRight />
       </div>
     </div>

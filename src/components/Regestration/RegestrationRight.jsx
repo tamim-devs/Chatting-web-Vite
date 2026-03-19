@@ -1,13 +1,13 @@
 import React from 'react'
-import Lock from '../../assets/lock.gif'
+import Lock from '../../assets/lock.png'
 const RegestrationRight = () => {
   return (
-    <div className='h-screen w-[40%]  bg-blue-400 flex justify-center items-center'>
+    <div className="w-full h-screen bg-blue-400 flex justify-center items-center">
       <picture>
-        <img src={Lock} alt="Lock" className='object-cover' />
+        <img src={Lock} alt="Lock" className="object-cover" />
       </picture>
     </div>
-  )
+  );
 }
 
 export default RegestrationRight

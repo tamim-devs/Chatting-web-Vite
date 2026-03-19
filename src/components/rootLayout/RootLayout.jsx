@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { ref, set, onDisconnect, onValue } from "firebase/database";
 import { auth, db } from "../../configuration/firebaseConfig";
 import HomeLeft from "../HomeComponents/HomeLeft/HomeLeft";
+import Navbar from "../Navbar";
 
 const RootLayout = () => {
   useEffect(() => {
@@ -27,10 +28,13 @@ const RootLayout = () => {
   }, []);
 
   return (
-    <div className="flex min-h-screen">
-      <HomeLeft />
-      <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
-        <Outlet />
+    <div className="min-h-screen bg-[#fafafa]">
+      <Navbar />
+      <div className="flex">
+        <HomeLeft />
+        <div className="flex-1 overflow-y-auto pb-20 lg:pb-0">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

@@ -4,18 +4,19 @@ import { useEffect, useState } from "react";
 
 const PrivateRoute = ({ children }) => {
   const auth = getAuth();
-  const [user, setUser] = useState(undefined); // ⚠️ IMPORTANT
+  const [user, setUser] = useState(undefined);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser || null);
     });
+
     return () => unsub();
   }, []);
 
-  // 🔄 auth checking
+  // 🔄 loading
   if (user === undefined) {
-    return null; // or loader
+    return <div>Loading...</div>;
   }
 
   // ❌ not logged in

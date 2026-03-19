@@ -16,13 +16,15 @@ import { uploadToCloudinary } from "../../utility/cloudinaryUpload";
 import Friends from "../../components/HomeComponents/HomeRight/Friends/Friends";
 import UserList from "../../components/HomeComponents/HomeRight/UserList/UserList";
 import FriendRequest from "../../components/HomeComponents/HomeRight/FriendRequest/FriendRequest";
-import { NavLink } from 'react-router-dom';
+import { NavLink } from "react-router-dom";
 
 const Settings = () => {
   const auth = getAuth();
   const db = getDatabase();
 
   const [user, setUser] = useState(null);
+  const [displayName, setDisplayName] = useState("");
+  const [savingName, setSavingName] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [storyUploading, setStoryUploading] = useState(false);
   const [blockedList, setBlockedList] = useState([]);
@@ -31,9 +33,22 @@ const Settings = () => {
   /* ================= AUTH ================= */
   useEffect(() => {
     setUser(auth.currentUser);
+    setDisplayName(auth.currentUser?.displayName || "");
   }, []);
 
-  /* ================= FETCH MY STORIES ================= */
+  const handleDisplayNameSave = async () => {
+    if (!user || !displayName.trim()) return;
+
+    setSavingName(true);
+    await updateProfile(user, { displayName: displayName.trim() });
+    await update(ref(db, `users/${user.uid}`), {
+      displayName: displayName.trim(),
+    });
+    setUser({ ...user, displayName: displayName.trim() });
+    setSavingName(false);
+  };
+
+  /* ================= STORIES ================= */
   useEffect(() => {
     onValue(ref(db, "stories"), (snap) => {
       let arr = [];
@@ -47,7 +62,7 @@ const Settings = () => {
     });
   }, []);
 
-  /* ================= BLOCKED USERS ================= */
+  /* ================= BLOCKED ================= */
   useEffect(() => {
     onValue(ref(db, "BlockedUsers"), (snap) => {
       let arr = [];
@@ -110,133 +125,121 @@ const Settings = () => {
     await remove(ref(db, `BlockedUsers/${item.key}`));
   };
 
-  return (
-    <div className="min-h-screen bg-gray-100 px-3 sm:px-6 py-4">
+ return (
+  <div className="min-h-screen bg-gray-100 px-3 sm:px-6 py-4">
 
-      {/* ================= MAIN GRID ================= */}
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="max-w-5xl mx-auto space-y-5">
 
-        {/* ================= LEFT (SETTINGS) ================= */}
-        <div className="space-y-6 lg:col-span-1">
+      {/* 🔥 PROFILE CARD */}
+      <div className="bg-white rounded-2xl shadow p-5 flex items-center gap-4">
 
-          {/* PROFILE */}
-          <div className="bg-white  b rounded-2xl shadow p-5 flex flex-col items-center gap-3">
-            <div style={{backgroundSize:"60px"}} className="relative bg-[url('src/assets/chat/avatar.png')] bg-center bg-no-repeat  w-24 h-24 rounded-full overflow-hidden group">
-              <img
-                src={user?.photoURL}
-                className="w-full h-full object-cover"
-              />
-              <label className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-pointer transition">
-                {uploading ? "Uploading..." : <SlCloudUpload className="text-white text-2xl" />}
-                <input
-                  type="file"
-                  hidden
-                  accept="image/*"
-                  onChange={handleProfileUpload}
-                />
-              </label>
-            </div>
-            <h2 className="font-semibold text-lg text-center">
-              {user?.displayName}
-            </h2>
-          </div>
+        <div className="relative">
+          <img
+            src={user?.photoURL}
+            className="w-20 h-20 rounded-full object-cover border"
+          />
 
-          {/* STORY UPLOAD */}
-          <div className="bg-white rounded-2xl shadow p-4">
-            <label className="flex items-center gap-2 cursor-pointer text-blue-600 font-medium">
-              <SlCloudUpload />
-              {storyUploading ? "Uploading..." : "Upload Story"}
-              <input
-                type="file"
-                hidden
-                accept="image/*,video/*"
-                onChange={handleStoryUpload}
-              />
-            </label>
-
-            <div className="mt-4 space-y-2 max-h-48 overflow-y-auto">
-              {myStories.map((s) => (
-                <div
-                  key={s.id}
-                  className="flex items-center justify-between bg-gray-50 p-2 rounded-lg"
-                >
-                  <div className="flex items-center gap-2">
-                    {s.type === "image" ? (
-                      <img src={s.media} className="w-12 h-12 rounded object-cover" />
-                    ) : (
-                      <video src={s.media} className="w-12 h-12 rounded object-cover" />
-                    )}
-                    <p className="text-xs text-gray-500">
-                      {moment(s.createdAt).fromNow()}
-                    </p>
-                  </div>
-
-                  <button
-                    onClick={() => handleDeleteStory(s.id)}
-                    className="text-red-600 text-xl"
-                  >
-                    <MdDelete />
-                  </button>
-                </div>
-              ))}
-
-              {myStories.length === 0 && (
-                <p className="text-xs text-gray-400">No active stories</p>
-              )}
-            </div>
-          </div>
-              {/* My Post  */}
-
-          <button className="p-2 text-lg rounded-md bg-black text-white">
-            <NavLink to="/mypost">All My post</NavLink>
-            </button>
-
-          {/* BLOCKED USERS */}
-          <div className="bg-white rounded-2xl shadow p-4 max-h-56 overflow-y-auto">
-            <h2 className="font-semibold mb-3">Blocked Users</h2>
-
-            {blockedList.map((item) => (
-              <div
-                key={item.key}
-                className="flex items-center justify-between bg-gray-50 p-2 rounded-lg mb-2"
-              >
-                <div className="flex items-center gap-2">
-                  <img
-                    src={item.blockedUserPhoto}
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <p className="text-sm">{item.blockedUserName}</p>
-                </div>
-
-                <button
-                  onClick={() => handleUnblock(item)}
-                  className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
-                >
-                  Unblock
-                </button>
-              </div>
-            ))}
-          </div>
+          <label className="absolute bottom-0 right-0 bg-blue-600 p-2 rounded-full cursor-pointer text-white text-xs">
+            ✎
+            <input type="file" hidden onChange={handleProfileUpload} />
+          </label>
         </div>
 
-        {/* ================= RIGHT (SOCIAL) ================= */}
-        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="flex-1">
+          <h2 className="text-lg font-semibold">{user?.displayName}</h2>
 
-          <div className="bg-white rounded-2xl shadow p-3 max-h-[70vh] overflow-y-auto">
-            <Friends />
-          </div>
+          <input
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            className="mt-2 w-full border rounded-lg px-3 py-2 text-sm"
+          />
 
-          <div className="bg-white rounded-2xl shadow p-3 max-h-[70vh] overflow-y-auto">
-            <UserList />
-          </div>
-
-          <div className="md:col-span-2 bg-white rounded-2xl shadow p-3 max-h-[60vh] overflow-y-auto">
-            <FriendRequest />
-          </div>
+          <button
+            onClick={handleDisplayNameSave}
+            className="mt-2 bg-blue-600 text-white px-4 py-1 rounded text-sm"
+          >
+            Save
+          </button>
         </div>
       </div>
+
+      {/* 🔥 QUICK ACTION */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+
+        <button className="bg-white p-3 rounded-xl shadow text-sm">
+          My Posts
+        </button>
+
+        <label className="bg-white p-3 rounded-xl shadow text-sm cursor-pointer text-center">
+          Upload Story
+          <input type="file" hidden onChange={handleStoryUpload} />
+        </label>
+
+        <button className="bg-white p-3 rounded-xl shadow text-sm">
+          Edit Profile
+        </button>
+
+      </div>
+
+      {/* 🔥 STORIES */}
+      <div className="bg-white rounded-2xl shadow p-4">
+        <h3 className="font-semibold mb-3">My Stories</h3>
+
+        <div className="flex gap-3 overflow-x-auto">
+          {myStories.map((s) => (
+            <div key={s.id} className="relative">
+              <img src={s.media} className="w-20 h-20 rounded object-cover" />
+              <button
+                onClick={() => handleDeleteStory(s.id)}
+                className="absolute top-0 right-0 bg-red-500 text-white rounded-full px-1"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 🔥 BLOCKED USERS */}
+      <div className="bg-white rounded-2xl shadow p-4">
+        <h3 className="font-semibold mb-3">Blocked Users</h3>
+
+        {blockedList.map((item) => (
+          <div key={item.key} className="flex justify-between mb-2">
+            <span>{item.blockedUserName}</span>
+            <button
+              onClick={() => handleUnblock(item)}
+              className="text-blue-600 text-sm"
+            >
+              Unblock
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* 🔥 SOCIAL SECTION */}
+      <div className="space-y-4">
+
+        <div className="bg-white rounded-2xl shadow p-3">
+          <h3 className="font-semibold mb-2">Friend Requests</h3>
+          <FriendRequest />
+        </div>
+
+        <div className="bg-white rounded-2xl shadow p-3">
+          <h3 className="font-semibold mb-2">User List</h3>
+          <UserList />
+        </div>
+
+        <div className="bg-white rounded-2xl shadow p-3">
+          <h3 className="font-semibold mb-2">Friends</h3>
+          <Friends />
+        </div>
+
+      </div>
+
     </div>
-  );
+  </div>
+);;
 };
 
 export default Settings;

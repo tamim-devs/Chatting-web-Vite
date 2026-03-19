@@ -1,7 +1,5 @@
-/* eslint-disable no-undef */
-
-importScripts("https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.0.0/firebase-messaging-compat.js");
 
 firebase.initializeApp({
   apiKey: "AIzaSyDD2Qmatm3mUZMFplKSV2K1CfI-AoRl8zQ",
@@ -13,13 +11,8 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-messaging.onBackgroundMessage((payload) => {
-  self.registration.showNotification(
-    payload.notification.title,
-    {
-      body: payload.notification.body,
-      icon: "/logo.png",
-      vibrate: [200, 100, 200],
-    }
-  );
+messaging.onBackgroundMessage(function (payload) {
+  self.registration.showNotification(payload.notification.title, {
+    body: payload.notification.body,
+  });
 });

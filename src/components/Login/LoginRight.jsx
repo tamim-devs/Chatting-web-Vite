@@ -1,15 +1,14 @@
 import React from "react";
-import Lock from "../../assets/lock.gif";
+import Lock from "../../assets/lock.png";
 
 const LoginRight = () => {
   return (
     <div
       className="
-        w-full 
+        w-full
         h-[40vh]          /* 📱 Mobile height */
         sm:h-[50vh]       /* Tablet */
         lg:h-screen       /* Desktop */
-        lg:w-1/2 
         bg-blue-400 
         flex 
         justify-center 
