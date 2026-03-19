@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { EmailValidator } from "../utils/validation";
 import { ClipLoader } from "react-spinners";
@@ -15,6 +15,7 @@ import { getDatabase, ref, set } from "firebase/database";
 import { NavLink, useNavigate } from "react-router-dom";
 import { requestPermissionAndToken } from "../../utility/firebaseMessaging";
 import { FaEye, FaRegEyeSlash } from "react-icons/fa";
+import { MdFileDownload } from "react-icons/md";
 
 const LoginLeft = () => {
   const db = getDatabase();
@@ -144,14 +145,45 @@ const LoginLeft = () => {
       ErrorToast(error.message);
     }
   };
+const [deferredPrompt, setDeferredPrompt] = useState(null);
+useEffect(() => {
+  const handler = (e) => {
+    e.preventDefault(); // 🔥 auto popup বন্ধ করে
+    setDeferredPrompt(e); // save করো
+  };
 
+  window.addEventListener("beforeinstallprompt", handler);
+
+  return () => window.removeEventListener("beforeinstallprompt", handler);
+}, []);
+const handleInstall = async () => {
+  if (!deferredPrompt) {
+    alert("App already installed or not supported");
+    return;
+  }
+
+  deferredPrompt.prompt(); // 🔥 install popup show
+
+  const { outcome } = await deferredPrompt.userChoice;
+
+  if (outcome === "accepted") {
+    console.log("User installed");
+  }
+
+  setDeferredPrompt(null);
+};
   // ================= JSX =================
   return (
+    <>
+
     <div className="relative min-h-screen flex items-center justify-center px-4 py-10 bg-gradient-to-br from-slate-900 via-indigo-900 to-sky-700 overflow-hidden">
+        <div  onClick={handleInstall} className="w-28 cursor-pointer flex flex-col items-center justify-center h-28 top-10 absolute rounded-full bg-blue-500">
+        <MdFileDownload color="white" size={32} />
+        <h2 className="text-white text-sm  font-semibold">Download App</h2>
+        </div>
       <div className="pointer-events-none absolute -top-24 -left-24 h-72 w-72 rounded-full bg-indigo-500/30 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-sky-400/30 blur-3xl" />
       <ToastContainer position="top-right" />
-
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-xl bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-7 sm:p-10"
@@ -283,6 +315,7 @@ const LoginLeft = () => {
         </div>
       </form>
     </div>
+        </>
   );
 };
 
