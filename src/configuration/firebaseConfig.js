@@ -5,17 +5,16 @@ import { getStorage } from "firebase/storage";
 import { getMessaging } from "firebase/messaging";
 
 const firebaseConfig = {
-  // Firebase Console থেকে EXACT config এখানে বসাবে
-  apiKey: "YOUR_NEW_API_KEY",
+  apiKey: "AIzaSyCfPazwowu4ShFGQ3pUFIVeRvbOCpSsd-4",
   authDomain: "chatting-web-514fb.firebaseapp.com",
-  databaseURL: "YOUR_DATABASE_URL",
+  databaseURL: "https://chatting-web-514fb-default-rtdb.firebaseio.com",
   projectId: "chatting-web-514fb",
-  storageBucket: "YOUR_STORAGE_BUCKET",
+  storageBucket: "chatting-web-514fb.firebasestorage.app",
   messagingSenderId: "344338779469",
-  appId: "YOUR_NEW_APP_ID",
+  appId: "1:344338779469:web:d9f7cfe3b18bf1d6623b04",
+  measurementId: "G-934WQSV1RQ"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
